@@ -1,0 +1,159 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+        
+/// Represents a user account from an OAuth provider
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?  @db.Text
+  access_token      String?  @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?  @db.Text
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+/// Represents a user session
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+}
+
+/// Represents an email verification token
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@index([expires])
+}
+
+/// Main user model containing core user information
+model User {
+  id              String            @id @default(cuid())
+  name            String?
+  email           String?           @unique
+  emailVerified   DateTime?
+  hashedPassword  String?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  
+  // Profile information
+  firstName       String?
+  lastName        String?
+  role            UserRole          @default(JOB_SEEKER)
+  isProfileComplete Boolean         @default(false)
+  
+  // Privacy and preferences
+  agreeToTerms    Boolean          @default(false)
+  agreeToPrivacy  Boolean          @default(false)
+  subscribeNewsletter Boolean      @default(true)
+  
+  // Profile relation
+  profile         UserProfile?
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
+
+  @@index([email])
+  @@index([deletedAt])
+  @@index([role])
+}
+
+/// User roles in the system
+enum UserRole {
+  JOB_SEEKER
+  EMPLOYER
+  ADMIN
+}
+
+/// Extended user profile information
+model UserProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Personal Information
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  country         String?  @default("US")
+  
+  // Professional Information
+  title           String?
+  bio             String?  @db.Text
+  experience      String?
+  skills          String[] // Array of skills
+  education       String?
+  certifications  String[] // Array of certifications
+  
+  // Job Seeker specific
+  desiredSalary   Int?
+  availability    String?
+  workType        WorkType[]
+  
+  // Employer specific
+  companyName     String?
+  companySize     String?
+  industry        String?
+  
+  // Accessibility Information
+  accessibilityNeeds String[] // Array of accessibility requirements
+  accommodations     String?  @db.Text
+  
+  // Social Links
+  linkedinUrl     String?
+  githubUrl       String?
+  portfolioUrl    String?
+  websiteUrl      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+}
+
+/// Work type preferences
+enum WorkType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  REMOTE
+  HYBRID
+  ON_SITE
+}
