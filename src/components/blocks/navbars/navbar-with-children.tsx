@@ -1,9 +1,12 @@
 "use client";
+import { useRequireApiAuth } from "@/hooks/use-api-session";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 
 export function NavbarWithChildren() {
@@ -37,6 +40,9 @@ const Navbar = () => {
 
 const DesktopNav = ({ navItems }: any) => {
   const [active, setActive] = useState<string | null>(null);
+  const router = useRouter()
+  const {isAuthenticated} = useAuth()
+  const {authenticated } = useRequireApiAuth()
   return (
 
     <motion.div
@@ -65,8 +71,8 @@ const DesktopNav = ({ navItems }: any) => {
        
         </Menu>
       </div>
-      <button className="hidden rounded-full bg-black px-8 py-2 text-sm font-bold text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] md:block dark:bg-white dark:text-black">
-        Book a call
+      <button onClick={() => { authenticated || isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="hidden rounded-full bg-primary px-8 py-2 text-sm font-bold text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] md:block dark:bg-white dark:text-black">
+     {authenticated || isAuthenticated ? "Dashboard" : "Sign In"}
       </button>
     </motion.div>
   );
@@ -75,6 +81,9 @@ const DesktopNav = ({ navItems }: any) => {
 const MobileNav = ({ navItems }: any) => {
   const [open, setOpen] = useState(false);
 
+  const router = useRouter()
+  const {isAuthenticated} = useAuth()
+  const {authenticated } = useRequireApiAuth()
   return (
     <>
       <motion.div
@@ -121,9 +130,8 @@ const MobileNav = ({ navItems }: any) => {
                   )}
                 </div>
               ))}
-              <button className="w-full rounded-lg bg-black px-8 py-2 font-medium text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] dark:bg-white dark:text-black">
-                Book a call
-              </button>
+              <button onClick={() => { authenticated || isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="w-full rounded-lg bg-primary px-8 py-2 font-medium text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] dark:bg-white dark:text-black">
+               {authenticated || isAuthenticated ? "Dashboard" : "Sign In"}              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -213,7 +221,7 @@ export const MenuItem = ({
         {item}
       </motion.p>
       {active !== null && (
-        <motion.div
+        <motion.div 
           initial={{ opacity: 0, scale: 0.85, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
         //   @ts-ignore

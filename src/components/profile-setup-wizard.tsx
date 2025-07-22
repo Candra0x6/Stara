@@ -13,7 +13,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Save, User, Heart, Briefcase, GraduationCap, Upload, FileText, Plus, X, Play, Pause } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, User, Heart, Briefcase, GraduationCap, Upload, FileText, Plus, X, Play, Pause, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useProfileSetup } from '@/hooks/use-profile-setup';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ProfileFileUpload } from '@/components/ui/profile-file-upload';
+import toast from 'react-hot-toast';
+import { useRequireApiAuth } from '@/hooks/use-api-session';
 
 // Complete form schema
 const formSchema = z.object({
@@ -23,19 +29,19 @@ const formSchema = z.object({
   location: z.string().min(2, 'Location is required'),
   email: z.string().email('Please enter a valid email address'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  
+
   // Disability Profile
   disabilityTypes: z.array(z.string()).min(1, 'Please select at least one disability type'),
   supportNeeds: z.string().optional(),
   assistiveTech: z.array(z.string()).optional(),
   accommodations: z.string().optional(),
-  
+
   // Skills & Work Preferences
   softSkills: z.array(z.string()).min(1, 'Please select at least one soft skill'),
   hardSkills: z.array(z.string()).min(1, 'Please select at least one hard skill'),
   industries: z.array(z.string()).min(1, 'Please select at least one industry'),
   workArrangement: z.string().min(1, 'Please select your preferred work arrangement'),
-  
+
   // Education & Experience
   education: z.array(z.object({
     degree: z.string().optional(),
@@ -49,11 +55,13 @@ const formSchema = z.object({
     duration: z.string().optional(),
     description: z.string().optional(),
   })).optional(),
-  
+
   // Documents
   resume: z.any().optional(),
+  resumeUrl: z.string().optional(),
   certifications: z.array(z.any()).optional(),
-  
+  certificationUrls: z.array(z.string()).optional(),
+
   // Preview
   customSummary: z.string().optional(),
   additionalInfo: z.string().optional(),
@@ -103,9 +111,26 @@ const workArrangementOptions = [
 
 export const ProfileSetupWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const { session, isAuthenticated } = useAuth();
+  const { authenticated } = useRequireApiAuth()
+  const {
+    profileSetup,
+    loading,
+    error,
+    saving,
+    updateStep,
+    updateProfile,
+    completeProfile,
+    clearError,
+    isCompleted,
+    completedSteps,
+    canProceedToNext,
+    loadProfileSetup
+  } = useProfileSetup();
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [formData, setFormData] = useState<Partial<FormData>>({});
-  const [savedProgress, setSavedProgress] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -126,7 +151,9 @@ export const ProfileSetupWizard = () => {
       education: [],
       experience: [],
       resume: undefined,
+      resumeUrl: '',
       certifications: [],
+      certificationUrls: [],
       customSummary: '',
       additionalInfo: '',
       ...formData,
@@ -134,27 +161,131 @@ export const ProfileSetupWizard = () => {
     mode: 'onChange',
   });
 
-  // Load saved progress from localStorage
+  // Load profile setup data into form when available
   useEffect(() => {
-    const saved = localStorage.getItem('profileWizardProgress');
-    if (saved) {
-      const parsedData = JSON.parse(saved);
-      setFormData(parsedData.formData || {});
-      setCurrentStep(parsedData.currentStep || 1);
-      form.reset(parsedData.formData || {});
+    if (profileSetup) {
+      // Set current step from API data
+      setCurrentStep(profileSetup.currentStep || 1);
+
+      // Populate form with existing data
+      const apiFormData = {
+        fullName: profileSetup.fullName || '',
+        preferredName: profileSetup.preferredName || '',
+        location: profileSetup.location || '',
+        email: profileSetup.email || '',
+        phone: profileSetup.phone || '',
+        disabilityTypes: profileSetup.disabilityTypes || [],
+        supportNeeds: profileSetup.supportNeeds || '',
+        assistiveTech: profileSetup.assistiveTech || [],
+        accommodations: profileSetup.accommodations || '',
+        softSkills: profileSetup.softSkills || [],
+        hardSkills: profileSetup.hardSkills || [],
+        industries: profileSetup.industries || [],
+        workArrangement: profileSetup.workArrangement || '',
+        education: profileSetup.education || [],
+        experience: profileSetup.experience || [],
+        resume: undefined, // File uploads handled separately
+        resumeUrl: profileSetup.resumeUrl || '',
+        certifications: profileSetup.certifications || [],
+        certificationUrls: profileSetup.certificationUrls || [],
+        customSummary: profileSetup.customSummary || '',
+        additionalInfo: profileSetup.additionalInfo || '',
+      };
+      setFormData(apiFormData);
+      form.reset(apiFormData);
     }
+
+
+
+  }, [profileSetup, form]);
+
+  // Load fallback from localStorage if no API data (for offline support)
+  useEffect(() => {
+    if (!profileSetup && !loading) {
+      const saved = localStorage.getItem('profileWizardProgress');
+      if (saved) {
+        try {
+          const parsedData = JSON.parse(saved);
+          setFormData(parsedData.formData || {});
+          setCurrentStep(parsedData.currentStep || 1);
+          form.reset(parsedData.formData || {});
+        } catch (error) {
+          console.error('Error parsing saved progress:', error);
+        }
+      }
+    }
+
+  }, [profileSetup, loading, form]);
+
+  const completedSubmission = async () => {
+    const currentData = { ...formData, ...form.getValues() };
+    try {
+      // Save to API if authenticated
+      console.log(currentData);
+      if (isAuthenticated || authenticated) {
+        const success = await updateProfile({
+          ...currentData,
+          currentStep,
+          status: 'COMPLETED'
+        });
+
+        if (success) {
+          toast.success('Profile setup completed successfully!');
+          return true;
+        } else {
+          toast.error('Failed to complete profile setup');
+          return false;
+        }
+      } else {
+        // Fallback to localStorage if not aut
+        toast.success('Profile setup completed! Sign in to save your progress.');
+        return true;
+      }
+    }
+    catch (error) {
+      console.error('Error completing profile setup:', error);
+      toast.error('An error occurred while completing your profile setup');
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    loadProfileSetup();
   }, []);
 
-  // Save progress to localStorage
-  const saveProgress = () => {
+  // Save progress to API and localStorage
+  const saveProgress = async () => {
     const currentData = { ...formData, ...form.getValues() };
-    localStorage.setItem('profileWizardProgress', JSON.stringify({
-      formData: currentData,
-      currentStep
-    }));
-    setFormData(currentData);
-    setSavedProgress(true);
-    setTimeout(() => setSavedProgress(false), 2000);
+    setLocalLoading(true);
+
+    try {
+      // Save to API if authenticated
+     
+        // Save to localStorage if not authenticated
+        saveToLocalStorage(currentData);
+        toast.success('Progress saved locally!');
+      
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      toast.error('Failed to save progress');
+      // Fallback to localStorage
+      saveToLocalStorage(currentData);
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  // Helper function to save to localStorage
+  const saveToLocalStorage = (data: Partial<FormData>) => {
+    try {
+      localStorage.setItem('profileWizardProgress', JSON.stringify({
+        formData: data,
+        currentStep
+      }));
+      setFormData(data);
+    } catch (error) {
+      console.error('Error saving to localStorage:', error);
+    }
   };
 
   // Audio description functionality
@@ -163,7 +294,7 @@ export const ProfileSetupWizard = () => {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.8;
       utterance.pitch = 1;
-      
+
       if (isPlaying) {
         speechSynthesis.cancel();
         setIsPlaying(false);
@@ -176,14 +307,17 @@ export const ProfileSetupWizard = () => {
   };
 
   const nextStep = async () => {
+    setLocalLoading(true);
+    clearError(); // Clear any previous errors
+
     try {
       // Get current form values
       const currentValues = form.getValues();
       console.log('Current form values:', currentValues);
-      
+
       // Validate current step
       let isValid = false;
-      
+
       switch (currentStep) {
         case 1:
           isValid = await form.trigger(['fullName', 'location', 'email', 'phone']);
@@ -205,29 +339,81 @@ export const ProfileSetupWizard = () => {
         default:
           isValid = true;
       }
-      
+
       console.log('Form validation result:', isValid);
       console.log('Form errors:', form.formState.errors);
-      
+
       if (isValid) {
-        // Save progress and move to next step
-        const updatedData = { ...formData, ...currentValues };
-        setFormData(updatedData);
-        localStorage.setItem('profileWizardProgress', JSON.stringify({
-          formData: updatedData,
-          currentStep: currentStep + 1
-        }));
-        
+        // Prepare step data based on current step
+        let stepData = {};
+
+        switch (currentStep) {
+          case 1:
+            stepData = {
+              fullName: currentValues.fullName,
+              preferredName: currentValues.preferredName,
+              location: currentValues.location,
+              email: currentValues.email,
+              phone: currentValues.phone,
+            };
+            break;
+          case 2:
+            stepData = {
+              disabilityTypes: currentValues.disabilityTypes,
+              supportNeeds: currentValues.supportNeeds,
+              assistiveTech: currentValues.assistiveTech,
+              accommodations: currentValues.accommodations,
+            };
+            break;
+          case 3:
+            stepData = {
+              softSkills: currentValues.softSkills,
+              hardSkills: currentValues.hardSkills,
+              industries: currentValues.industries,
+              workArrangement: currentValues.workArrangement,
+            };
+            break;
+          case 4:
+            stepData = {
+              education: currentValues.education,
+              experience: currentValues.experience,
+            };
+            break;
+          case 5:
+            stepData = {
+              resumeUrl: currentValues.resumeUrl,
+              certificationUrls: currentValues.certificationUrls,
+            };
+            break;
+          case 6:
+            stepData = {
+              customSummary: currentValues.customSummary,
+              additionalInfo: currentValues.additionalInfo,
+            };
+            break;
+        }
+
         if (currentStep < 6) {
-          setCurrentStep(currentStep + 1);
-          // Announce step change to screen readers
-          const nextStepInfo = steps[currentStep];
-          const announcement = `Moving to step ${currentStep + 1} of 6: ${nextStepInfo.title}. ${nextStepInfo.description}`;
-          announceToScreenReader(announcement);
-        } else {
-          // Complete the profile setup
-          console.log('Profile setup completed!', updatedData);
-          // Here you would typically submit to your backend
+          // Update the current step via API
+          if (isAuthenticated || authenticated) {
+
+            setCurrentStep(currentStep + 1);
+            // Announce step change to screen readers
+            const nextStepInfo = steps[currentStep];
+            const announcement = `Moving to step ${currentStep + 1} of 6: ${nextStepInfo.title}. ${nextStepInfo.description}`;
+            announceToScreenReader(announcement);
+            toast.success(`Step ${currentStep} completed!`);
+
+          } else {
+            // Fallback to localStorage if not authenticated
+            const updatedData = { ...formData, ...currentValues };
+            saveToLocalStorage(updatedData);
+            setCurrentStep(currentStep + 1);
+
+            const nextStepInfo = steps[currentStep];
+            const announcement = `Moving to step ${currentStep + 1} of 6: ${nextStepInfo.title}. ${nextStepInfo.description}`;
+            announceToScreenReader(announcement);
+          }
         }
       } else {
         // Scroll to first error
@@ -236,14 +422,19 @@ export const ProfileSetupWizard = () => {
         if (errorElement) {
           errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+        toast.error('Please fix the errors before continuing');
       }
     } catch (error) {
       console.error('Error in nextStep:', error);
+      toast.error('An error occurred. Please try again.');
+    } finally {
+      setLocalLoading(false);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
+      // Save current progress before going back
       saveProgress();
       setCurrentStep(currentStep - 1);
       // Announce step change to screen readers
@@ -458,12 +649,13 @@ export const ProfileSetupWizard = () => {
                         <div key={type} className="flex items-center space-x-2">
                           <Checkbox
                             id={type}
-                            checked={field.value?.includes(type)}
+                            checked={Array.isArray(field.value) && field.value.includes(type)}
                             onCheckedChange={(checked) => {
+                              const currentValue = Array.isArray(field.value) ? field.value : [];
                               if (checked) {
-                                field.onChange([...(field.value || []), type]);
+                                field.onChange([...currentValue, type]);
                               } else {
-                                field.onChange(field.value?.filter((v) => v !== type));
+                                field.onChange(currentValue.filter((v) => v !== type));
                               }
                             }}
                           />
@@ -477,7 +669,7 @@ export const ProfileSetupWizard = () => {
                   </FormItem>
                 )}
               />
-
+           
               <FormField
                 control={form.control}
                 name="assistiveTech"
@@ -492,12 +684,13 @@ export const ProfileSetupWizard = () => {
                         <div key={tech} className="flex items-center space-x-2">
                           <Checkbox
                             id={tech}
-                            checked={field.value?.includes(tech)}
+                            checked={Array.isArray(field.value) && field.value.includes(tech)}
                             onCheckedChange={(checked) => {
+                              const currentValue = Array.isArray(field.value) ? field.value : [];
                               if (checked) {
-                                field.onChange([...(field.value || []), tech]);
+                                field.onChange([...currentValue, tech]);
                               } else {
-                                field.onChange(field.value?.filter((v) => v !== tech));
+                                field.onChange(currentValue.filter((v) => v !== tech));
                               }
                             }}
                           />
@@ -512,26 +705,6 @@ export const ProfileSetupWizard = () => {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="supportNeeds"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Support Needs</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe any specific support needs you have..."
-                        className="min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Optional: Describe any specific support needs or considerations
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
@@ -594,12 +767,13 @@ export const ProfileSetupWizard = () => {
                         <div key={skill} className="flex items-center space-x-2">
                           <Checkbox
                             id={skill}
-                            checked={field.value?.includes(skill)}
+                            checked={Array.isArray(field.value) && field.value.includes(skill)}
                             onCheckedChange={(checked) => {
+                              const currentValue = Array.isArray(field.value) ? field.value : [];
                               if (checked) {
-                                field.onChange([...(field.value || []), skill]);
+                                field.onChange([...currentValue, skill]);
                               } else {
-                                field.onChange(field.value?.filter((v) => v !== skill));
+                                field.onChange(currentValue.filter((v) => v !== skill));
                               }
                             }}
                           />
@@ -628,12 +802,13 @@ export const ProfileSetupWizard = () => {
                         <div key={skill} className="flex items-center space-x-2">
                           <Checkbox
                             id={skill}
-                            checked={field.value?.includes(skill)}
+                            checked={Array.isArray(field.value) && field.value.includes(skill)}
                             onCheckedChange={(checked) => {
+                              const currentValue = Array.isArray(field.value) ? field.value : [];
                               if (checked) {
-                                field.onChange([...(field.value || []), skill]);
+                                field.onChange([...currentValue, skill]);
                               } else {
-                                field.onChange(field.value?.filter((v) => v !== skill));
+                                field.onChange(currentValue.filter((v) => v !== skill));
                               }
                             }}
                           />
@@ -647,7 +822,6 @@ export const ProfileSetupWizard = () => {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="industries"
@@ -661,13 +835,14 @@ export const ProfileSetupWizard = () => {
                       {industryOptions.map((industry) => (
                         <div key={industry} className="flex items-center space-x-2">
                           <Checkbox
-                            id={industry}
-                            checked={field.value?.includes(industry)}
+                            id={industry} 
+                            checked={Array.isArray(field.value) && field.value.includes(industry)}
                             onCheckedChange={(checked) => {
+                              const currentValue = Array.isArray(field.value) ? field.value : [];
                               if (checked) {
-                                field.onChange([...(field.value || []), industry]);
+                                field.onChange([...currentValue, industry]);
                               } else {
-                                field.onChange(field.value?.filter((v) => v !== industry));
+                                field.onChange(currentValue.filter((v) => v !== industry));
                               }
                             }}
                           />
@@ -681,7 +856,6 @@ export const ProfileSetupWizard = () => {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="workArrangement"
@@ -764,7 +938,7 @@ export const ProfileSetupWizard = () => {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -856,7 +1030,7 @@ export const ProfileSetupWizard = () => {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -926,7 +1100,7 @@ export const ProfileSetupWizard = () => {
 
       case 5:
         return (
-          <div className="space-y-6">
+          <div className="space-y-6 h-full">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold text-primary mb-2">Upload Documents</h2>
@@ -942,86 +1116,59 @@ export const ProfileSetupWizard = () => {
               </Button>
             </div>
 
-            <div className="space-y-6" aria-describedby="documents-description">
+            <div className="space-y-6 h-full" aria-describedby="documents-description">
               <div id="documents-description" className="sr-only">
                 This optional section allows you to upload your resume, CV, and any certifications.
               </div>
 
-              <Card className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Upload className="h-5 w-5 text-accent" />
-                    <h3 className="text-lg font-medium">Resume/CV</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Upload your current resume or CV (PDF, DOC, or DOCX)
-                  </p>
-                  <FormField
-                    control={form.control}
-                    name="resume"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="file"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              field.onChange(file);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Maximum file size: 10MB
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </Card>
+              {/* Resume Upload */}
+              <div className="h-full space-y-">
 
-              <Card className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-5 w-5 text-accent" />
-                    <h3 className="text-lg font-medium">Certifications</h3>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Upload any relevant certifications or credentials
-                  </p>
-                  <FormField
-                    control={form.control}
-                    name="certifications"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="file"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            multiple
-                            onChange={(e) => {
-                              const files = Array.from(e.target.files || []);
-                              field.onChange(files);
-                            }}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Select multiple files if needed. Maximum 5MB per file.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </Card>
+              <FormField
+                control={form.control}
+                name="resumeUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <ProfileFileUpload
+                      type="resume"
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={loading || saving}
+                      label="Resume/CV"
+                      description="Upload your current resume or CV (PDF, DOC, or DOCX, max 10MB)"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Certifications Upload */}
+              <FormField
+                control={form.control}
+                name="certificationUrls"
+                render={({ field }) => (
+                  <FormItem>
+                    <ProfileFileUpload
+                      type="certification"
+                      value={field.value}
+                      onChange={field.onChange}
+                      multiple={true}
+                      disabled={loading || saving}
+                      label="Certifications"
+                      description="Upload relevant certifications or credentials (PDF, DOC, DOCX, JPG, PNG, max 10MB each)"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              </div>
 
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                 <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-                  Don't have a resume yet?
+                  Don't have documents yet?
                 </h4>
                 <p className="text-blue-800 dark:text-blue-200 text-sm">
-                  No problem! We'll generate a professional resume for you based on the information you've provided in the next step.
+                  No problem! Document uploads are optional. You can always add them later from your profile.
                 </p>
               </div>
             </div>
@@ -1210,6 +1357,44 @@ export const ProfileSetupWizard = () => {
         </p>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            {error}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearError}
+              className="ml-2 p-1 h-auto"
+            >
+              Dismiss
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <Alert>
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription>
+            Loading your profile setup...
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Authentication Warning */}
+      {!isAuthenticated || !authenticated && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            You're not signed in. Your progress will be saved locally, but sign in to sync across devices.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Progress Bar */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
@@ -1221,31 +1406,36 @@ export const ProfileSetupWizard = () => {
           </span>
         </div>
         <Progress value={(currentStep / steps.length) * 100} className="h-2" />
-        
+
         {/* Step indicators */}
         <div className="flex justify-between">
           {steps.map((step, index) => {
             const Icon = step.icon;
             const isActive = index + 1 === currentStep;
-            const isCompleted = index + 1 < currentStep;
-            
+            const isCompleted = completedSteps.includes(index + 1);
+            const isPast = index + 1 < currentStep;
+
             return (
               <div
                 key={step.id}
-                className={`flex flex-col items-center space-y-2 ${
-                  isActive ? 'text-accent' : isCompleted ? 'text-primary' : 'text-muted-foreground'
-                }`}
+                className={`flex flex-col items-center space-y-2 ${isActive ? 'text-accent' : isCompleted || isPast ? 'text-primary' : 'text-muted-foreground'
+                  }`}
               >
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                    isActive
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border-2 relative ${isActive
                       ? 'border-accent bg-accent text-white'
                       : isCompleted
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-muted-foreground'
-                  }`}
+                        ? 'border-primary bg-primary text-white'
+                        : isPast
+                          ? 'border-primary bg-primary text-white'
+                          : 'border-muted-foreground'
+                    }`}
                 >
-                  <Icon className="h-5 w-5" />
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-5 w-5" />
+                  ) : (
+                    <Icon className="h-5 w-5" />
+                  )}
                 </div>
                 <span className="text-xs font-medium text-center hidden sm:block">
                   {step.title}
@@ -1257,10 +1447,10 @@ export const ProfileSetupWizard = () => {
       </div>
 
       {/* Main Content */}
-      <Card className="p-6">
+      <Card className="p-6 h-fit flex flex-col">
         <FormProvider {...form}>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(() => {})}>
+            <form onSubmit={form.handleSubmit(() => { })}>
               {renderStep()}
             </form>
           </Form>
@@ -1274,17 +1464,18 @@ export const ProfileSetupWizard = () => {
             type="button"
             variant="default"
             onClick={saveProgress}
-            disabled={savedProgress}
+            disabled={localLoading || saving}
           >
             <Save className="h-4 w-4 mr-2" />
-            {savedProgress ? 'Saved!' : 'Save Progress'}
+            {saving || localLoading ? 'Saving...' : 'Save Progress'}
           </Button>
-          
+
           {(currentStep === 4 || currentStep === 5) && (
             <Button
               type="button"
               variant="ghost"
               onClick={nextStep}
+              disabled={localLoading || saving}
             >
               Skip Step
             </Button>
@@ -1296,19 +1487,32 @@ export const ProfileSetupWizard = () => {
             type="button"
             variant="default"
             onClick={prevStep}
-            disabled={currentStep === 1}
+            disabled={currentStep === 1 || localLoading || saving}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
             Previous
           </Button>
-          
+
           <Button
             type="button"
-            onClick={nextStep}
-            disabled={currentStep === 6}
+            className='cursor-pointer'
+            onClick={() => {
+              if (currentStep === 6) {
+                completedSubmission();
+              } else {
+                nextStep();
+              }
+            }}
+            disabled={localLoading || saving}
           >
-            {currentStep === 6 ? 'Complete Profile' : 'Next'}
-            {currentStep !== 6 && <ChevronRight className="h-4 w-4 ml-2" />}
+            {saving || localLoading ? (
+              'Processing...'
+            ) : currentStep === 6 ? (
+              'Complete Profile'
+            ) : (
+              'Next'
+            )}
+            {currentStep !== 6 && !saving && !localLoading && <ChevronRight className="h-4 w-4 ml-2" />}
           </Button>
         </div>
       </div>

@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { 
   User, 
   Mail, 
-  Shield, 
   Calendar, 
   Briefcase, 
   Settings, 
@@ -57,6 +56,7 @@ export default function DashboardPage() {
   const { authenticated: apiAuthenticated, isLoading: apiLoading, user: apiUser, logout: apiLogout } = useApiSession()
   const router = useRouter()
   
+  console.log(nextAuthUser)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -76,6 +76,7 @@ export default function DashboardPage() {
     }
   }, [nextAuthUser, apiAuthenticated, nextAuthLoading, apiLoading, router, apiUser])
 
+  console.log(nextAuthUser, "form api", apiUser)
   // Fetch user profile data
   useEffect(() => {
     const fetchProfile = async () => {
@@ -86,8 +87,6 @@ export default function DashboardPage() {
 
       try {
         if (authMode === 'nextauth' && nextAuthUser) {
-          // For NextAuth, we might need to fetch from a different endpoint
-          // For now, use the user data from NextAuth
           setUserProfile({
             id: nextAuthUser.id || '',
             firstName: nextAuthUser.name?.split(' ')[0] || '',

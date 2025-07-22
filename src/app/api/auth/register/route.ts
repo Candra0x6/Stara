@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
         agreeToTerms: validatedData.agreeToTerms,
         agreeToPrivacy: validatedData.agreeToPrivacy,
         subscribeNewsletter: validatedData.subscribeNewsletter,
+        
         profile: {
           create: {
             // Initialize empty profile

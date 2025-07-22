@@ -13,13 +13,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import SocialLoginButtons from "@/components/social-login-buttons"
 import RoleSelector from "@/components/role-selector"
-import { Eye, EyeOff, Mail, User, CheckCircle, AlertCircle, Loader2, Shield, Accessibility } from "lucide-react"
+import { Eye, EyeOff, Mail, User, CheckCircle, AlertCircle, Loader2, Shield, Accessibility, Settings } from "lucide-react"
 import BackButton from "@/components/blocks/navigation/back-button"
-import { signIn, getSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/hooks/use-auth"
+import { useApiSession } from "@/hooks/use-api-session"
 import Link from "next/link"
-import Link from "next/link"
+import { getSession, signIn } from "next-auth/react"
 
 interface FormData {
   firstName: string
@@ -39,7 +38,7 @@ interface FormErrors {
 }
 
 export default function AuthPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
+  const { authenticated, isLoading: authLoading, login, register } = useApiSession()
   const router = useRouter()
   
   const [activeTab, setActiveTab] = useState("signin")
@@ -64,10 +63,10 @@ export default function AuthPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !authLoading) {
-      router.push('/profile-setup')
+    if (authenticated && !authLoading) {
+      router.push('/dashboard')
     }
-  }, [isAuthenticated, authLoading, router])
+  }, [authenticated, authLoading, router])
 
   // Refs for auto-focus
   const emailRef = useRef<HTMLInputElement>(null)
@@ -119,7 +118,6 @@ export default function AuthPage() {
       }
       if (!formData.agreeToTerms) newErrors.agreeToTerms = "You must agree to the terms of service"
       if (!formData.agreeToPrivacy) newErrors.agreeToPrivacy = "You must agree to the privacy policy"
-      if (!captchaVerified) newErrors.captcha = "Please complete the security verification"
     }
 
     if (!formData.email.trim()) {
@@ -146,82 +144,49 @@ export default function AuthPage() {
 
     setIsLoading(true)
     setSuccessMessage("")
+    setErrors({})
 
     try {
       if (activeTab === "signup") {
         // Register new user
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            password: formData.password,
-            role: formData.role.toUpperCase().replace('-', '_'), // Convert 'job-seeker' to 'JOB_SEEKER'
-            agreeToTerms: formData.agreeToTerms,
-            agreeToPrivacy: formData.agreeToPrivacy,
-            subscribeNewsletter: formData.subscribeNewsletter,
-          }),
+        const result = await register({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role.toUpperCase().replace('-', '_'), // Convert 'job-seeker' to 'JOB_SEEKER'
+          agreeToTerms: formData.agreeToTerms,
+          agreeToPrivacy: formData.agreeToPrivacy,
+          subscribeNewsletter: formData.subscribeNewsletter,
         })
 
-        const data = await response.json()
-
-        if (!response.ok) {
-          if (data.details) {
+        if (result.success) {
+          setSuccessMessage("Account created successfully! Redirecting...")
+          router.push('/dashboard')
+        } else {
+          if (result.details) {
             // Handle validation errors
             const newErrors: FormErrors = {}
-            data.details.forEach((error: any) => {
+            result.details.forEach((error: any) => {
               if (error.path && error.path.length > 0) {
                 newErrors[error.path[0]] = error.message
               }
             })
             setErrors(newErrors)
           } else {
-            setErrors({ submit: data.error || 'Registration failed' })
+            setErrors({ submit: result.error || 'Registration failed' })
           }
-          return
-        }
-
-        setSuccessMessage("Account created successfully! Signing you in...")
-        
-        // Automatically sign in the user
-        const signInResult = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false,
-        })
-
-        if (signInResult?.error) {
-          setErrors({ submit: 'Account created but failed to sign in. Please sign in manually.' })
-          setActiveTab("signin")
-        } else if (signInResult?.ok) {
-          setSuccessMessage("Account created and signed in successfully! Redirecting...")
-          router.push('/profile-setup')
         }
         
       } else {
         // Sign in existing user
-        const result = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false,
-        })
+        const result = await login(formData.email, formData.password, rememberMe)
 
-        if (result?.error) {
-          setErrors({ submit: 'Invalid email or password' })
-        } else if (result?.ok) {
+        if (result.success) {
           setSuccessMessage("Welcome back! Redirecting...")
-          
-          // Handle remember me by setting a longer session
-          if (rememberMe) {
-            // Session duration is handled by NextAuth configuration
-            document.cookie = `remember-me=true; max-age=${30 * 24 * 60 * 60}; path=/` // 30 days
-          }
-          
-          router.push('/profile-setup')
+          router.push('/dashboard')
+        } else {
+          setErrors({ submit: result.error || 'Login failed' })
         }
       }
     } catch (error) {
@@ -232,7 +197,7 @@ export default function AuthPage() {
     }
   }
 
-  // Handle social login
+  
   const handleSocialLogin = async (provider: string) => {
     setIsLoading(true)
     try {
@@ -259,7 +224,6 @@ export default function AuthPage() {
       setIsLoading(false)
     }
   }
-
   // Handle input changes
   const handleInputChange = async (field: keyof FormData, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -291,18 +255,17 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-lg"
       >
-      <BackButton title="AI Job Matcher" subtitle="Sign In or Sign Up" />
+        <BackButton title="AI Job Matcher" subtitle="API-Based Authentication" />
+        
         <Card className="rounded-2xl border-2 p-0 py-4 bg-card/95 backdrop-blur-sm">
-          <CardHeader className="text-center ">
-
-
+          <CardHeader className="text-center">  
+            
             <CardTitle className="text-2xl font-bold bg-foreground bg-clip-text text-transparent">
               AI Job Matcher
             </CardTitle>
@@ -311,7 +274,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="">
+          <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2 rounded-xl">
                 <TabsTrigger value="signin" className="rounded-lg">
@@ -377,23 +340,23 @@ export default function AuthPage() {
                     )}
                   </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox 
-                          id="remember" 
-                          checked={rememberMe}
-                          onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                        />
-                        <Label htmlFor="remember" className="text-sm">
-                          Remember me
-                        </Label>
-                      </div>
-                      <Link href="/auth/forgot-password">
-                        <Button variant="link" className="px-0 text-sm">
-                          Forgot password?
-                        </Button>
-                      </Link>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="remember" 
+                        checked={rememberMe}
+                        onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                      />
+                      <Label htmlFor="remember" className="text-sm">
+                        Remember me
+                      </Label>
                     </div>
+                    <Link href="/auth/forgot-password">
+                      <Button variant="link" className="px-0 text-sm">
+                        Forgot password?
+                      </Button>
+                    </Link>
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="signup" className="space-y-2 mt-0">
@@ -627,8 +590,6 @@ export default function AuthPage() {
                       </Label>
                     </div>
                   </div>
-
-
                 </TabsContent>
 
                 {/* Submit Button */}
@@ -676,20 +637,9 @@ export default function AuthPage() {
                 </AnimatePresence>
               </form>
 
-              {/* Social Login */}
-              <SocialLoginButtons onSocialLogin={handleSocialLogin} isLoading={isLoading} />
-
               {/* Auth Mode Switch */}
-              <div className="text-center pt-4 border-t mt-6">
-                <p className="text-xs text-muted-foreground mb-2">
-                  Using NextAuth authentication
-                </p>
-                <Link href="/auth/api">
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Switch to API Mode
-                  </Button>
-                </Link>
-              </div>
+                           <SocialLoginButtons onSocialLogin={handleSocialLogin} isLoading={isLoading} />
+
             </Tabs>
 
             {/* Accessibility Statement */}
@@ -705,3 +655,4 @@ export default function AuthPage() {
     </div>
   )
 }
+

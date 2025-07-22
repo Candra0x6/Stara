@@ -9,7 +9,7 @@
  * - Logout
  */
 
-const baseUrl = 'http://localhost:3002'
+const baseUrl = 'http://localhost:3000'
 
 // Test user data
 const testUser = {
