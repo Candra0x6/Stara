@@ -81,7 +81,8 @@ model User {
   subscribeNewsletter Boolean      @default(true)
   
   // Profile relation
-  profile         UserProfile?
+  profile    UserProfile?
+  status          String?     
 
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -99,53 +100,6 @@ enum UserRole {
   ADMIN
 }
 
-/// Extended user profile information
-model UserProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Personal Information
-  phone           String?
-  address         String?
-  city            String?
-  state           String?
-  zipCode         String?
-  country         String?  @default("US")
-  
-  // Professional Information
-  title           String?
-  bio             String?  @db.Text
-  experience      String?
-  skills          String[] // Array of skills
-  education       String?
-  certifications  String[] // Array of certifications
-  
-  // Job Seeker specific
-  desiredSalary   Int?
-  availability    String?
-  workType        WorkType[]
-  
-  // Employer specific
-  companyName     String?
-  companySize     String?
-  industry        String?
-  
-  // Accessibility Information
-  accessibilityNeeds String[] // Array of accessibility requirements
-  accommodations     String?  @db.Text
-  
-  // Social Links
-  linkedinUrl     String?
-  githubUrl       String?
-  portfolioUrl    String?
-  websiteUrl      String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([userId])
-}
 
 /// Work type preferences
 enum WorkType {
@@ -156,4 +110,63 @@ enum WorkType {
   REMOTE
   HYBRID
   ON_SITE
+}
+
+/// Profile setup completion status
+enum ProfileStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+/// Profile setup model for tracking wizard progress and data
+model UserProfile {
+  id              String              @id @default(cuid())
+  userId          String              @unique
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Progress tracking
+  status          ProfileStatus  @default(NOT_STARTED)
+  currentStep     Int                 @default(1)
+  completedSteps  Int[]               @default([])
+  
+  // Basic Information (Step 1)
+  fullName        String?
+  preferredName   String?
+  location        String?
+  email           String?
+  phone           String?
+  
+  // Disability Profile (Step 2)
+  disabilityTypes String[]            @default([])
+  supportNeeds    String?             @db.Text
+  assistiveTech   String[]            @default([])
+  accommodations  String?             @db.Text
+  
+  // Skills & Work Preferences (Step 3)
+  softSkills      String[]            @default([])
+  hardSkills      String[]            @default([])
+  industries      String[]            @default([])
+  workArrangement String?
+  
+  // Education & Experience (Step 4)
+  education       Json[]              @default([])
+  experience      Json[]              @default([])
+  
+  // Documents (Step 5)
+  resumeUrl       String?
+  certificationUrls String[]          @default([])
+  certifications  Json[]              @default([])
+  
+  // Preview & Additional Info (Step 6)
+  customSummary   String?             @db.Text
+  additionalInfo  String?             @db.Text
+  
+  // Timestamps
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  completedAt     DateTime?
+  
+  @@index([userId])
+  @@index([status])
 }
