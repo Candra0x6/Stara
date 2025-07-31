@@ -19,7 +19,7 @@ import { useProfileSetup } from '@/hooks/use-profile-setup';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProfileFileUpload } from '@/components/ui/profile-file-upload';
 import toast from 'react-hot-toast';
-import { useRequireApiAuth } from '@/hooks/use-api-session';
+import { useRouter } from 'next/navigation';
 
 // Complete form schema
 const formSchema = z.object({
@@ -112,7 +112,7 @@ const workArrangementOptions = [
 export const ProfileSetupWizard = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const { session, isAuthenticated } = useAuth();
-  const { authenticated } = useRequireApiAuth()
+  const router = useRouter()
   const {
     profileSetup,
     loading,
@@ -216,13 +216,12 @@ export const ProfileSetupWizard = () => {
     }
 
   }, [profileSetup, loading, form]);
-
+;
   const completedSubmission = async () => {
     const currentData = { ...formData, ...form.getValues() };
     try {
-      // Save to API if authenticated
-      console.log(currentData);
-      if (isAuthenticated || authenticated) {
+      if (isAuthenticated ) {
+        alert("aaas")
         const success = await updateProfile({
           ...currentData,
           currentStep,
@@ -231,6 +230,7 @@ export const ProfileSetupWizard = () => {
 
         if (success) {
           toast.success('Profile setup completed successfully!');
+          router.push('/jobs/recommendations')
           return true;
         } else {
           toast.error('Failed to complete profile setup');
@@ -238,7 +238,7 @@ export const ProfileSetupWizard = () => {
         }
       } else {
         // Fallback to localStorage if not aut
-        toast.success('Profile setup completed! Sign in to save your progress.');
+        toast.error('You must be logged in to complete your profile');
         return true;
       }
     }
@@ -395,7 +395,7 @@ export const ProfileSetupWizard = () => {
 
         if (currentStep < 6) {
           // Update the current step via API
-          if (isAuthenticated || authenticated) {
+          if (isAuthenticated ) {
 
             setCurrentStep(currentStep + 1);
             // Announce step change to screen readers
@@ -1386,7 +1386,7 @@ export const ProfileSetupWizard = () => {
       )}
 
       {/* Authentication Warning */}
-      {!isAuthenticated || !authenticated && (
+      {!isAuthenticated  && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>

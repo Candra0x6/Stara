@@ -1,505 +1,338 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { motion } from "motion/react"
+import { useState } from "react"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Briefcase, 
-  Settings, 
-  LogOut,
-  UserCircle,
-  Bell,
+import ApplicationTimeline from "@/components/application-timeline"
+import MessageCenter from "@/components/message-center"
+import InterviewCalendar from "@/components/interview-calendar"
+import FollowUpSuggestions from "@/components/follow-up-suggestions"
+import {
   Search,
   TrendingUp,
-  CheckCircle,
   Clock,
-  MapPin,
-  AlertCircle,
-  Loader2
+  CheckCircle,
+  Calendar,
+  MessageSquare,
+  Bell,
+  Settings,
+  Eye,
+  UserCheck,
+  XCircle,
 } from "lucide-react"
-import { useAuth } from "@/hooks/use-auth"
-import { useApiSession } from "@/hooks/use-api-session"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { signOut } from 'next-auth/react'
-import { clearRememberMe } from '@/lib/session'
 
-interface UserProfile {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  role: string
-  avatar?: string
-  isEmailVerified: boolean
-  createdAt: string
-  lastLoginAt?: string
-  profile?: {
-    phoneNumber?: string
-    location?: string
-    bio?: string
-    skills?: string[]
-    experience?: string
-    education?: string[]
-  }
+// Mock application data
+const mockApplications = [
+  {
+    id: "1",
+    jobTitle: "Senior Frontend Developer",
+    company: "TechCorp Inc.",
+    location: "San Francisco, CA",
+    appliedDate: "Jan 15, 2024",
+    status: "interview_scheduled",
+    matchScore: 95,
+    salary: "$120,000 - $150,000",
+    viewedDate: "Jan 16, 2024",
+    interviewDate: "Jan 20, 2024",
+    lastActivity: "2 hours ago",
+    messages: 2,
+  },
+  {
+    id: "2",
+    jobTitle: "UX Designer - Accessibility Focus",
+    company: "InclusiveDesign Co.",
+    location: "Remote",
+    appliedDate: "Jan 12, 2024",
+    status: "viewed",
+    matchScore: 88,
+    salary: "$90,000 - $110,000",
+    viewedDate: "Jan 14, 2024",
+    lastActivity: "1 day ago",
+    messages: 1,
+  },
+  {
+    id: "3",
+    jobTitle: "Data Analyst",
+    company: "Analytics Plus",
+    location: "New York, NY",
+    appliedDate: "Jan 8, 2024",
+    status: "applied",
+    matchScore: 72,
+    salary: "$75,000 - $95,000",
+    lastActivity: "5 days ago",
+    messages: 0,
+  },
+  {
+    id: "4",
+    jobTitle: "Customer Success Manager",
+    company: "SupportFirst",
+    location: "Austin, TX",
+    appliedDate: "Jan 5, 2024",
+    status: "hired",
+    matchScore: 81,
+    salary: "$65,000 - $80,000",
+    viewedDate: "Jan 6, 2024",
+    interviewDate: "Jan 10, 2024",
+    finalDate: "Jan 12, 2024",
+    finalStatus: "hired" as const,
+    lastActivity: "3 days ago",
+    messages: 5,
+  },
+  {
+    id: "5",
+    jobTitle: "Product Manager",
+    company: "InnovateTech",
+    location: "Seattle, WA",
+    appliedDate: "Jan 3, 2024",
+    status: "rejected",
+    matchScore: 67,
+    salary: "$100,000 - $130,000",
+    viewedDate: "Jan 4, 2024",
+    interviewDate: "Jan 8, 2024",
+    finalDate: "Jan 10, 2024",
+    finalStatus: "rejected" as const,
+    lastActivity: "1 week ago",
+    messages: 3,
+  },
+]
+
+const statusConfig = {
+  applied: { label: "Applied", color: "blue", icon: Clock },
+  viewed: { label: "Viewed", color: "purple", icon: Eye },
+  interview_scheduled: { label: "Interview Scheduled", color: "amber", icon: Calendar },
+  hired: { label: "Hired", color: "emerald", icon: UserCheck },
+  rejected: { label: "Rejected", color: "red", icon: XCircle },
 }
 
-export default function DashboardPage() {
-  const { user: nextAuthUser, isLoading: nextAuthLoading } = useAuth()
-  const { authenticated: apiAuthenticated, isLoading: apiLoading, user: apiUser, logout: apiLogout } = useApiSession()
-  const router = useRouter()
-  
-  console.log(nextAuthUser)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [authMode, setAuthMode] = useState<'nextauth' | 'api' | 'none'>('none')
+export default function ApplicationTracker() {
+  const [applications, setApplications] = useState(mockApplications)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [selectedApplication, setSelectedApplication] = useState<string | null>(null)
 
-  // Determine which authentication system is active
-  useEffect(() => {
-    if (!nextAuthLoading && !apiLoading) {
-      if (nextAuthUser) {
-        setAuthMode('nextauth')
-      } else if (apiAuthenticated && apiUser) {
-        setAuthMode('api')
-      } else {
-        setAuthMode('none')
-        router.push('/auth')
-      }
-    }
-  }, [nextAuthUser, apiAuthenticated, nextAuthLoading, apiLoading, router, apiUser])
+  const filteredApplications = applications.filter((app) => {
+    const matchesSearch =
+      app.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.company.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesStatus = statusFilter === "all" || app.status === statusFilter
+    return matchesSearch && matchesStatus
+  })
 
-  console.log(nextAuthUser, "form api", apiUser)
-  // Fetch user profile data
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (authMode === 'none') return
+  const stats = [
+    {
+      label: "Total Applications",
+      value: applications.length,
+      icon: TrendingUp,
+      color: "blue",
+    },
+    {
+      label: "In Progress",
+      value: applications.filter((app) => ["applied", "viewed", "interview_scheduled"].includes(app.status)).length,
+      icon: Clock,
+      color: "amber",
+    },
+    {
+      label: "Interviews",
+      value: applications.filter((app) => app.status === "interview_scheduled").length,
+      icon: Calendar,
+      color: "purple",
+    },
+    {
+      label: "Success Rate",
+      value: `${Math.round((applications.filter((app) => app.status === "hired").length / applications.length) * 100)}%`,
+      icon: CheckCircle,
+      color: "emerald",
+    },
+  ]
 
-      setIsLoadingProfile(true)
-      setError(null)
-
-      try {
-        if (authMode === 'nextauth' && nextAuthUser) {
-          setUserProfile({
-            id: nextAuthUser.id || '',
-            firstName: nextAuthUser.name?.split(' ')[0] || '',
-            lastName: nextAuthUser.name?.split(' ').slice(1).join(' ') || '',
-            email: nextAuthUser.email || '',
-            role: 'JOB_SEEKER', // Default role
-            avatar: nextAuthUser.image,
-            isEmailVerified: nextAuthUser.emailVerified || false,
-            createdAt: new Date().toISOString(),
-          })
-        } else if (authMode === 'api' && apiUser) {
-          // For API auth, fetch detailed profile
-          const response = await fetch('/api/user/profile')
-          if (!response.ok) {
-            throw new Error('Failed to fetch profile')
-          }
-          const profileData = await response.json()
-          setUserProfile(profileData.user)
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error)
-        setError('Failed to load profile data')
-      } finally {
-        setIsLoadingProfile(false)
-      }
-    }
-
-    fetchProfile()
-  }, [authMode, nextAuthUser, apiUser])
-
-  const handleLogout = async () => {
-    try {
-      if (authMode === 'nextauth') {
-        clearRememberMe()
-        await signOut({ callbackUrl: '/auth' })
-      } else if (authMode === 'api') {
-        await apiLogout()
-        router.push('/auth')
-      }
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-
-  const formatRole = (role: string) => {
-    return role.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
-  }
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'JOB_SEEKER':
-        return 'bg-blue-100 text-blue-800'
-      case 'EMPLOYER':
-        return 'bg-green-100 text-green-800'
-      case 'ADMIN':
-        return 'bg-purple-100 text-purple-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase()
-  }
-
-  if (nextAuthLoading || apiLoading || isLoadingProfile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-          <p className="text-muted-foreground">Loading your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Alert className="max-w-md">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error || 'Unable to load user profile. Please try again.'}
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
+  const statusCounts = Object.entries(statusConfig).map(([status, config]) => ({
+    status,
+    count: applications.filter((app) => app.status === status).length,
+    ...config,
+  }))
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold">AI Job Matcher</h1>
-              <Badge variant="outline" className="text-xs">
-                {authMode === 'nextauth' ? 'NextAuth' : 'API'} Mode
-              </Badge>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm">
-                <Search className="h-4 w-4" />
-              </Button>
-              
-              <div className="flex items-center space-x-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={userProfile.avatar} />
-                  <AvatarFallback>{getInitials(userProfile.firstName, userProfile.lastName)}</AvatarFallback>
-                </Avatar>
-                <span className="text-sm font-medium hidden md:inline">
-                  {userProfile.firstName} {userProfile.lastName}
-                </span>
+    <div className="min-h-screen bg-background max-w-7xl mx-auto">
+    
+      <div className="container mx-auto px-4 py-6">
+        {/* Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
+        >
+          {stats.map((stat, index) => {
+            const Icon = stat.icon
+            return (
+              <Card key={stat.label} className="rounded-xl p-0">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg bg-${stat.color}-100 text-${stat.color}-600`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </motion.div>
+
+        {/* Main Content */}
+        <Tabs defaultValue="applications" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 rounded-xl">
+            <TabsTrigger value="applications" className="rounded-lg">
+              Applications
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="rounded-lg">
+              Messages
+            </TabsTrigger>
+            <TabsTrigger value="interviews" className="rounded-lg">
+              Interviews
+            </TabsTrigger>
+            <TabsTrigger value="suggestions" className="rounded-lg">
+              Suggestions
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="applications" className="space-y-6">
+            {/* Filters */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search applications..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 rounded-lg"
+                />
               </div>
 
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+              <div className="flex gap-2 overflow-x-auto">
+                <Button
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStatusFilter("all")}
+                  className="rounded-full whitespace-nowrap"
+                >
+                  All ({applications.length})
+                </Button>
+                {statusCounts.map(({ status, count, label, color }) => (
+                  <Button
+                    key={status}
+                    variant={statusFilter === status ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setStatusFilter(status)}
+                    className="rounded-full whitespace-nowrap"
+                  >
+                    {label} ({count})
+                  </Button>
+                ))}
+              </div>
+            </motion.div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profile Card */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader className="text-center">
-                <Avatar className="h-20 w-20 mx-auto mb-4">
-                  <AvatarImage src={userProfile.avatar} />
-                  <AvatarFallback className="text-lg">
-                    {getInitials(userProfile.firstName, userProfile.lastName)}
-                  </AvatarFallback>
-                </Avatar>
-                <CardTitle className="text-xl">
-                  {userProfile.firstName} {userProfile.lastName}
-                </CardTitle>
-                <CardDescription className="space-y-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    {userProfile.email}
-                  </div>
-                  <Badge className={getRoleColor(userProfile.role)}>
-                    {formatRole(userProfile.role)}
-                  </Badge>
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Email Verified</span>
-                  <div className="flex items-center gap-1">
-                    {userProfile.isEmailVerified ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-600">Verified</span>
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-4 w-4 text-orange-600" />
-                        <span className="text-orange-600">Pending</span>
-                      </>
-                    )}
-                  </div>
-                </div>
+            {/* Applications List */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredApplications.map((application, index) => {
+                const statusInfo = statusConfig[application.status as keyof typeof statusConfig]
+                const StatusIcon = statusInfo.icon
 
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Member Since</span>
-                  <span>{new Date(userProfile.createdAt).toLocaleDateString()}</span>
-                </div>
-
-                {userProfile.lastLoginAt && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Last Login</span>
-                    <span>{new Date(userProfile.lastLoginAt).toLocaleDateString()}</span>
-                  </div>
-                )}
-
-                <div className="pt-4 space-y-2">
-                  <Link href="/profile">
-                    <Button variant="outline" className="w-full">
-                      <UserCircle className="h-4 w-4 mr-2" />
-                      Edit Profile
-                    </Button>
-                  </Link>
-                  
-                  <Link href="/profile-setup">
-                    <Button variant="outline" className="w-full">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Complete Setup
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-2">
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="overview" className="space-y-6">
-                {/* Welcome Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="h-5 w-5" />
-                      Welcome to AI Job Matcher
-                    </CardTitle>
-                    <CardDescription>
-                      Your personalized job matching dashboard powered by AI
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="p-4 border rounded-lg">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          <Briefcase className="h-4 w-4" />
-                          Job Matches
-                        </h3>
-                        <p className="text-2xl font-bold text-primary">12</p>
-                        <p className="text-sm text-muted-foreground">New matches this week</p>
-                      </div>
-                      
-                      <div className="p-4 border rounded-lg">
-                        <h3 className="font-semibold flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          Applications
-                        </h3>
-                        <p className="text-2xl font-bold text-primary">5</p>
-                        <p className="text-sm text-muted-foreground">Active applications</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Quick Actions */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                    <CardDescription>
-                      Get started with these common tasks
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Link href="/jobs">
-                        <Button variant="outline" className="w-full h-auto p-4 justify-start">
-                          <div className="flex items-center gap-3">
-                            <Search className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Browse Jobs</p>
-                              <p className="text-sm text-muted-foreground">Find your next opportunity</p>
+                return (
+                  <motion.div
+                    key={application.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                  >
+                    <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 cursor-pointe py-6">
+                      <CardHeader className="">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold mb-1">{application.jobTitle}</h3>
+                            <p className="text-muted-foreground mb-2">{application.company}</p>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge
+                                variant="secondary"
+                                className={`bg-${statusInfo.color}-100 text-${statusInfo.color}-700 rounded-full`}
+                              >
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {statusInfo.label}
+                              </Badge>
+                              {application.messages > 0 && (
+                                <Badge variant="outline" className="rounded-full">
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  {application.messages}
+                                </Badge>
+                              )}
                             </div>
                           </div>
-                        </Button>
-                      </Link>
 
-                      <Link href="/cv-builder">
-                        <Button variant="outline" className="w-full h-auto p-4 justify-start">
-                          <div className="flex items-center gap-3">
-                            <User className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Build CV</p>
-                              <p className="text-sm text-muted-foreground">Create your resume</p>
-                            </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-emerald-600 mb-1">{application.matchScore}%</div>
+                            <p className="text-xs text-muted-foreground">Match</p>
                           </div>
-                        </Button>
-                      </Link>
-
-                      <Link href="/tracker">
-                        <Button variant="outline" className="w-full h-auto p-4 justify-start">
-                          <div className="flex items-center gap-3">
-                            <Calendar className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Application Tracker</p>
-                              <p className="text-sm text-muted-foreground">Track your progress</p>
-                            </div>
-                          </div>
-                        </Button>
-                      </Link>
-
-                      <Link href="/profile-setup">
-                        <Button variant="outline" className="w-full h-auto p-4 justify-start">
-                          <div className="flex items-center gap-3">
-                            <Settings className="h-5 w-5" />
-                            <div className="text-left">
-                              <p className="font-medium">Complete Profile</p>
-                              <p className="text-sm text-muted-foreground">Improve your matches</p>
-                            </div>
-                          </div>
-                        </Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="activity" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Activity</CardTitle>
-                    <CardDescription>
-                      Your latest actions and updates
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 p-3 border rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <div>
-                          <p className="font-medium">Account Created</p>
-                          <p className="text-sm text-muted-foreground">
-                            Welcome to AI Job Matcher! Your account has been successfully created.
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(userProfile.createdAt).toLocaleString()}
-                          </p>
                         </div>
-                      </div>
+                      </CardHeader>
 
-                      {!userProfile.isEmailVerified && (
-                        <div className="flex items-center gap-3 p-3 border rounded-lg border-orange-200 bg-orange-50">
-                          <Clock className="h-5 w-5 text-orange-600" />
-                          <div>
-                            <p className="font-medium">Email Verification Pending</p>
-                            <p className="text-sm text-muted-foreground">
-                              Please check your email and verify your account to access all features.
+                      <CardContent className="pt-0">
+                        <div className="space-y-4">
+                          <div className="text-sm text-muted-foreground">
+                            <p className="mb-1">
+                              <strong>Applied:</strong> {application.appliedDate}
+                            </p>
+                            <p className="mb-1">
+                              <strong>Salary:</strong> {application.salary}
+                            </p>
+                            <p>
+                              <strong>Last Activity:</strong> {application.lastActivity}
                             </p>
                           </div>
+
+                          {/* Timeline */}
+                          <div className="border-t pt-4">
+                            <ApplicationTimeline
+                              currentStage={application.status}
+                              applicationDate={application.appliedDate}
+                              viewedDate={application.viewedDate}
+                              interviewDate={application.interviewDate}
+                              finalDate={application.finalDate}
+                              finalStatus={application.finalStatus}
+                            />
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </TabsContent>
 
-              <TabsContent value="settings" className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Settings</CardTitle>
-                    <CardDescription>
-                      Manage your account preferences and settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Authentication Mode</p>
-                        <p className="text-sm text-muted-foreground">
-                          Currently using {authMode === 'nextauth' ? 'NextAuth' : 'API'} authentication
-                        </p>
-                      </div>
-                      <Badge variant="outline">
-                        {authMode === 'nextauth' ? 'NextAuth' : 'API'} Mode
-                      </Badge>
-                    </div>
+          <TabsContent value="messages">
+            <MessageCenter />
+          </TabsContent>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-muted-foreground">
-                          Receive updates about job matches and applications
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Configure
-                      </Button>
-                    </div>
+          <TabsContent value="interviews">
+            <InterviewCalendar />
+          </TabsContent>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Privacy Settings</p>
-                        <p className="text-sm text-muted-foreground">
-                          Control your profile visibility and data sharing
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Manage
-                      </Button>
-                    </div>
-
-                    <div className="pt-4 border-t">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-red-600">Danger Zone</p>
-                          <p className="text-sm text-muted-foreground">
-                            Irreversible and destructive actions
-                          </p>
-                        </div>
-                        <Button variant="destructive" size="sm">
-                          Delete Account
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+          <TabsContent value="suggestions">
+            <FollowUpSuggestions />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

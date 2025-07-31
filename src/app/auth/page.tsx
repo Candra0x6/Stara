@@ -16,9 +16,9 @@ import RoleSelector from "@/components/role-selector"
 import { Eye, EyeOff, Mail, User, CheckCircle, AlertCircle, Loader2, Shield, Accessibility, Settings } from "lucide-react"
 import BackButton from "@/components/blocks/navigation/back-button"
 import { useRouter } from "next/navigation"
-import { useApiSession } from "@/hooks/use-api-session"
 import Link from "next/link"
 import { getSession, signIn } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 
 interface FormData {
   firstName: string
@@ -38,7 +38,8 @@ interface FormErrors {
 }
 
 export default function AuthPage() {
-  const { authenticated, isLoading: authLoading, login, register } = useApiSession()
+const {isAuthenticated, user} = useAuth()
+  console.log("Auth Hook - Is Authenticated:", isAuthenticated, "User:", user)
   const router = useRouter()
   
   const [activeTab, setActiveTab] = useState("signin")
@@ -63,10 +64,10 @@ export default function AuthPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (authenticated && !authLoading) {
+    if (isAuthenticated) {
       router.push('/dashboard')
     }
-  }, [authenticated, authLoading, router])
+  }, [isAuthenticated, router])
 
   // Refs for auto-focus
   const emailRef = useRef<HTMLInputElement>(null)
@@ -148,45 +149,64 @@ export default function AuthPage() {
 
     try {
       if (activeTab === "signup") {
-        // Register new user
-        const result = await register({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          role: formData.role.toUpperCase().replace('-', '_'), // Convert 'job-seeker' to 'JOB_SEEKER'
-          agreeToTerms: formData.agreeToTerms,
-          agreeToPrivacy: formData.agreeToPrivacy,
-          subscribeNewsletter: formData.subscribeNewsletter,
+        // First, register the user via your API
+        const registerResponse = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            password: formData.password,
+            role: formData.role.toUpperCase().replace('-', '_'),
+            agreeToTerms: formData.agreeToTerms,
+            agreeToPrivacy: formData.agreeToPrivacy,
+            subscribeNewsletter: formData.subscribeNewsletter,
+          })
         })
 
-        if (result.success) {
-          setSuccessMessage("Account created successfully! Redirecting...")
-          router.push('/dashboard')
+        const registerData = await registerResponse.json()
+
+        if (registerResponse.ok) {
+          // Registration successful, now sign in with NextAuth
+          const signInResult = await signIn('credentials', {
+            email: formData.email,
+            password: formData.password,
+            redirect: false,
+          })
+          if (signInResult?.ok && !signInResult?.error) {
+            setSuccessMessage("Account created successfully! Redirecting...")
+            router.push('/profile-setup')
+          } else {
+            setErrors({ submit: 'Account created but sign in failed. Please try signing in manually.' })
+            setActiveTab("signin") // Switch to signin tab
+          }
         } else {
-          if (result.details) {
-            // Handle validation errors
+          if (registerData.details) {
             const newErrors: FormErrors = {}
-            result.details.forEach((error: any) => {
+            registerData.details.forEach((error: any) => {
               if (error.path && error.path.length > 0) {
                 newErrors[error.path[0]] = error.message
               }
             })
             setErrors(newErrors)
           } else {
-            setErrors({ submit: result.error || 'Registration failed' })
+            setErrors({ submit: registerData.error || 'Registration failed' })
           }
         }
-        
       } else {
-        // Sign in existing user
-        const result = await login(formData.email, formData.password, rememberMe)
+        // Sign in existing user with NextAuth only
+        const signInResult = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        })
 
-        if (result.success) {
+        if (signInResult?.ok && !signInResult?.error) {
           setSuccessMessage("Welcome back! Redirecting...")
           router.push('/dashboard')
         } else {
-          setErrors({ submit: result.error || 'Login failed' })
+          setErrors({ submit: 'Invalid email or password' })
         }
       }
     } catch (error) {
@@ -250,6 +270,8 @@ export default function AuthPage() {
       }
     }
   }
+
+  
 
   const passwordStrength = getPasswordStrength(formData.password)
 

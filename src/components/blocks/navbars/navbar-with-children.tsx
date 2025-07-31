@@ -1,16 +1,41 @@
 "use client";
-import { useRequireApiAuth } from "@/hooks/use-api-session";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 import { IconChevronDown, IconMenu2, IconX } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { DashboardNavigation } from "./dashboard-navbar";
 
 export function NavbarWithChildren() {
-  return <Navbar />;
+  
+  const pathname = usePathname();
+    const [activeSection, setActiveSection] = useState(pathname.split("/")[2] || "dashboard");
+
+    // Mock user data
+    const user = {
+        name: "Alex Johnson",
+        avatar: undefined,
+        notifications: 3,
+    }
+
+  const isDashboard = pathname.startsWith("/dashboard");
+ 
+  
+  return (
+    <div className="">
+      {isDashboard ? (
+        <div className="w-full py-10">
+
+          <DashboardNavigation activeSection={activeSection} onSectionChange={setActiveSection} user={user} />
+        </div>
+      ) : (
+        <Navbar />
+      )}
+    </div>
+  )
 }
 
 const Navbar = () => {
@@ -42,7 +67,6 @@ const DesktopNav = ({ navItems }: any) => {
   const [active, setActive] = useState<string | null>(null);
   const router = useRouter()
   const {isAuthenticated} = useAuth()
-  const {authenticated } = useRequireApiAuth()
   return (
 
     <motion.div
@@ -71,8 +95,8 @@ const DesktopNav = ({ navItems }: any) => {
        
         </Menu>
       </div>
-      <button onClick={() => { authenticated || isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="hidden rounded-full bg-primary px-8 py-2 text-sm font-bold text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] md:block dark:bg-white dark:text-black">
-     {authenticated || isAuthenticated ? "Dashboard" : "Sign In"}
+      <button onClick={() => { isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="hidden rounded-full bg-primary px-8 py-2 text-sm font-bold text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] md:block dark:bg-white dark:text-black">
+     {isAuthenticated ? "Dashboard" : "Sign In"}
       </button>
     </motion.div>
   );
@@ -83,7 +107,6 @@ const MobileNav = ({ navItems }: any) => {
 
   const router = useRouter()
   const {isAuthenticated} = useAuth()
-  const {authenticated } = useRequireApiAuth()
   return (
     <>
       <motion.div
@@ -130,8 +153,8 @@ const MobileNav = ({ navItems }: any) => {
                   )}
                 </div>
               ))}
-              <button onClick={() => { authenticated || isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="w-full rounded-lg bg-primary px-8 py-2 font-medium text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] dark:bg-white dark:text-black">
-               {authenticated || isAuthenticated ? "Dashboard" : "Sign In"}              </button>
+              <button onClick={() => { isAuthenticated ? router.push("/dashboard") : router.push("/auth") }} className="w-full rounded-lg bg-primary px-8 py-2 font-medium text-white shadow-[0px_-2px_0px_0px_rgba(255,255,255,0.4)_inset] dark:bg-white dark:text-black">
+               {isAuthenticated ? "Dashboard" : "Sign In"}              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -175,7 +198,7 @@ const MobileChildNavItems = ({ navItem }: { navItem: any }) => {
   );
 };
 
-const Logo = () => {
+export const Logo = () => {
   return (
     <Link
       href="/"

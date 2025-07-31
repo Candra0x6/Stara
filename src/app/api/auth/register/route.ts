@@ -9,6 +9,7 @@ const registerSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
+  // @ts-ignore
   role: z.enum(['JOB_SEEKER', 'EMPLOYER'], {
     errorMap: () => ({ message: 'Role must be either JOB_SEEKER or EMPLOYER' })
   }),
@@ -67,19 +68,8 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    // Create session for auto-login
-    const sessionExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-    const sessionToken = crypto.randomUUID()
-    
-    // Create session in database (NextAuth compatible)
-    await prisma.session.create({
-      data: {
-        sessionToken,
-        userId: user.id,
-        expires: sessionExpiry
-      }
-    })
-    
+
+  
     // Remove sensitive data from response
     const { hashedPassword: _, ...userWithoutPassword } = user
     
@@ -87,24 +77,11 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       message: 'User created successfully',
       user: userWithoutPassword,
-      autoSignIn: true, // Flag to indicate session was created
-      session: {
-        expires: sessionExpiry.toISOString()
-      }
+      autoSignIn: true // Flag to indicate session was created
     }, { status: 201 })
     
     // Set NextAuth compatible session cookie
-    const cookieName = process.env.NODE_ENV === 'production' 
-      ? '__Secure-next-auth.session-token' 
-      : 'next-auth.session-token'
-    
-    response.cookies.set(cookieName, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: sessionExpiry,
-      path: '/'
-    })
+   
     
     return response
     

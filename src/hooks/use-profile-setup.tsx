@@ -3,7 +3,6 @@ import { profileSetupApi, ApiResponse } from '@/lib/api/profile-setup'
 import { ProfileSetupResponse, UpdateProfileSetup } from '@/lib/validations/profile'
 import { useAuth } from '@/hooks/use-auth'
 import { cp } from 'fs'
-import { useRequireApiAuth } from './use-api-session'
 
 export interface UseProfileSetupResult {
   // State
@@ -29,7 +28,6 @@ export interface UseProfileSetupResult {
 
 export const useProfileSetup = (): UseProfileSetupResult => {
   const { isAuthenticated } = useAuth()
-  const {authenticated} = useRequireApiAuth()
   const [profileSetup, setProfileSetup] = useState<ProfileSetupResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -47,7 +45,6 @@ export const useProfileSetup = (): UseProfileSetupResult => {
 
     try {
       const response = await profileSetupApi.getProfileSetup()
-      console.log('Profile setup response:', response)
       if (response.success && response.profileSetup) {
         setProfileSetup(response.profileSetup)
       } else if (response.error) {
@@ -98,7 +95,6 @@ export const useProfileSetup = (): UseProfileSetupResult => {
 
     try {
       let response: ApiResponse<ProfileSetupResponse>
-      console.log(profileSetup);
       if (profileSetup) {
         // Update existing profile
         response = await profileSetupApi.updateProfileSetup(data)

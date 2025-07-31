@@ -84,6 +84,11 @@ model User {
   profile    UserProfile?
   status          String?     
 
+  // Job-related relations
+  jobApplications JobApplication[]
+  savedJobs      SavedJob[]
+  jobRecommendationRatings JobRecommendationRating[]
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
@@ -169,4 +174,251 @@ model UserProfile {
   
   @@index([userId])
   @@index([status])
+}
+
+/// Company model for storing company information
+model Company {
+  id              String          @id @default(cuid())
+  name            String
+  description     String?         @db.Text
+  website         String?
+  logo            String?
+  size            CompanySize?
+  industry        String?
+  location        String?
+  culture         String?         @db.Text
+  values          String[]        @default([])
+  
+  // Contact information
+  contactEmail    String?
+  contactPhone    String?
+  
+  // Social links
+  linkedinUrl     String?
+  twitterUrl      String?
+  
+  jobs            Job[]
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([industry])
+  @@index([size])
+}
+
+/// Job posting model
+model Job {
+  id                  String              @id @default(cuid())
+  title               String
+  slug                String              @unique
+  description         String              @db.Text
+  responsibilities    String[]            @default([])
+  requirements        String[]            @default([])
+  preferredSkills     String[]            @default([])
+  benefits            String[]            @default([])
+  
+  // Company relation
+  companyId           String
+  company             Company             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Job details
+  location            String
+  workType            WorkType
+  isRemote            Boolean             @default(false)
+  isHybrid            Boolean             @default(false)
+  experience          ExperienceLevel
+  salaryMin           Int?
+  salaryMax           Int?
+  salaryCurrency      String              @default("USD")
+  
+  // Accommodations
+  accommodations      AccommodationType[] @default([])
+  accommodationDetails String?            @db.Text
+  
+  // Application process
+  applicationProcess  String[]            @default([])
+  applicationDeadline DateTime?
+  
+  // Status and visibility
+  status              JobStatus           @default(DRAFT)
+  isActive            Boolean             @default(false)
+  isFeatured          Boolean             @default(false)
+  
+  // SEO and metadata
+  metaTitle           String?
+  metaDescription     String?
+  
+  // Relations
+  applications        JobApplication[]
+  savedJobs           SavedJob[]
+  recommendationRatings JobRecommendationRating[]
+  
+  // Tracking
+  viewCount           Int                 @default(0)
+  applicationCount    Int                 @default(0)
+  
+  // Timestamps
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  publishedAt         DateTime?
+  closedAt            DateTime?
+  
+  @@index([companyId])
+  @@index([status])
+  @@index([workType])
+  @@index([experience])
+  @@index([isActive])
+  @@index([publishedAt])
+  @@index([accommodations])
+}
+
+/// Job application model
+model JobApplication {
+  id              String                    @id @default(cuid())
+  jobId           String
+  userId          String
+  
+  job             Job                       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user            User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Application data
+  coverLetter     String?                   @db.Text
+  resumeUrl       String?
+  customAnswers   Json[]                    @default([])
+  
+  // Status tracking
+  status          ApplicationStatus         @default(PENDING)
+  
+  // Timeline
+  appliedAt       DateTime                  @default(now())
+  reviewedAt      DateTime?
+  interviewAt     DateTime?
+  rejectedAt      DateTime?
+  acceptedAt      DateTime?
+  
+  // Notes from employer
+  employerNotes   String?                   @db.Text
+  
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  
+  @@unique([jobId, userId])
+  @@index([userId])
+  @@index([jobId])
+  @@index([status])
+}
+
+/// Saved jobs model
+model SavedJob {
+  id          String    @id @default(cuid())
+  jobId       String
+  userId      String
+  
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime  @default(now())
+  
+  @@unique([jobId, userId])
+  @@index([userId])
+  @@index([jobId])
+}
+
+/// Accommodation types enum
+enum AccommodationType {
+  VISUAL
+  HEARING
+  MOBILITY
+  COGNITIVE
+  MOTOR
+  SOCIAL
+  SENSORY
+  COMMUNICATION
+  LEARNING
+  MENTAL_HEALTH
+}
+
+/// Company size enum
+enum CompanySize {
+  STARTUP
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+/// Experience level enum
+enum ExperienceLevel {
+  ENTRY_LEVEL
+  JUNIOR
+  MID_LEVEL
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+/// Job status enum
+enum JobStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  CLOSED
+  EXPIRED
+}
+
+/// Job recommendation rating model
+model JobRecommendationRating {
+  id              String    @id @default(cuid())
+  userId          String
+  jobId           String
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job             Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  // Rating data
+  rating          Int       // Rating from 1-5 or 1-10
+  feedback        String?   @db.Text
+  reason          RatingReason?
+  
+  // Recommendation context
+  recommendedBy   String?   // AI, algorithm, or manual
+  matchScore      Float?    // Algorithm match percentage
+  
+  // Tracking
+  isHelpful       Boolean?  // Whether user found the recommendation helpful
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
+  @@index([rating])
+  @@index([recommendedBy])
+}
+
+/// Rating reason enum
+enum RatingReason {
+  PERFECT_MATCH
+  GOOD_FIT
+  SOME_INTEREST
+  NOT_RELEVANT
+  POOR_MATCH
+  ALREADY_APPLIED
+  LOCATION_ISSUE
+  SALARY_MISMATCH
+  SKILL_MISMATCH
+  ACCOMMODATION_CONCERN
+}
+
+/// Application status enum
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_COMPLETED
+  OFFER_EXTENDED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
 }

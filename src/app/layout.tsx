@@ -7,6 +7,7 @@ import ClientProvider from "@/components/providers/client-provider";
 import AuthProvider from "@/components/providers/auth-provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await getServerSession(authOptions);
-
+  console.log("Session in RootLayout:", session);
   return (
     <html lang="en">
       <body
@@ -38,6 +39,7 @@ export default async function RootLayout({
         <AuthProvider session={session}>
           <ClientProvider />
           {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

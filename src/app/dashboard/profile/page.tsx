@@ -74,91 +74,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-card border-b sticky top-0 z-40 backdrop-blur-sm bg-card/80"
-      >
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Profile Settings
-                </h1>
-              </div>
-
-              <Separator orientation="vertical" className="h-6" />
-
-              <Badge variant="secondary" className="rounded-full">
-                Last updated 2 hours ago
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleExportPDF}
-                disabled={isExporting}
-                variant="outline"
-                className="rounded-xl bg-transparent"
-              >
-                {isExporting ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                    className="w-4 h-4 border-2 border-current border-t-transparent rounded-full mr-2"
-                  />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Export PDF
-              </Button>
-
-              <Button variant="outline" className="rounded-xl bg-transparent">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share Profile
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-lg">
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-lg">
-                  <DropdownMenuItem className="rounded-md">
-                    <Bell className="h-4 w-4 mr-2" />
-                    Notifications
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md">
-                    <Palette className="h-4 w-4 mr-2" />
-                    Theme Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md">
-                    <Keyboard className="h-4 w-4 mr-2" />
-                    Keyboard Shortcuts
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-md">
-                    <HelpCircle className="h-4 w-4 mr-2" />
-                    Help & Support
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-md text-red-600">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </motion.header>
-
+    
       <div className="container mx-auto px-4 py-6">
         {/* Tab Navigation */}
         <motion.div
@@ -175,13 +91,13 @@ export default function ProfilePage() {
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="rounded-xl p-4 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                    className="rounded-xl p-4 data-[state=active]:bg-primary data-[state=active]:shadow-sm"
                   >
                     <div className="flex flex-col items-center gap-2 text-center">
                       <Icon className="h-5 w-5" />
                       <div>
                         <div className="font-medium text-sm">{tab.label}</div>
-                        <div className="text-xs text-muted-foreground hidden sm:block">{tab.description}</div>
+                        <div className="text-xs hidden sm:block">{tab.description}</div>
                       </div>
                     </div>
                   </TabsTrigger>

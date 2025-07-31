@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children, requireProfileSetup = false }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth()
   const router = useRouter()
-
+  
   useEffect(() => {
     if (!isLoading) {
       if (!isAuthenticated) {

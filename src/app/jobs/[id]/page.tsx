@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence } from "motion/react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -28,126 +28,84 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle,
+  Loader2,
 } from "lucide-react"
 import BackButton from "@/components/blocks/navigation/back-button"
-
-// Mock job data
-const jobData = {
-  id: "1",
-  title: "Senior Frontend Developer",
-  company: "TechCorp Inc.",
-  location: "San Francisco, CA",
-  salary: "$120,000 - $150,000",
-  type: "Full-time",
-  remote: true,
-  posted: "2 days ago",
-  matchScore: 95,
-  matchReason:
-    "Perfect match! Your React and TypeScript skills align perfectly with this role. The company offers excellent visual and cognitive accommodations.",
-  accommodations: ["visual", "cognitive", "hearing"],
-  companySize: "500-1000 employees",
-  industry: "Technology",
-  experience: "5+ years",
-
-  description: `We're looking for a senior frontend developer to join our accessibility-focused team. You'll work on building inclusive web applications that serve millions of users worldwide.
-
-Our team is passionate about creating digital experiences that work for everyone, regardless of their abilities. You'll be working with cutting-edge technologies while making a real impact on accessibility in tech.`,
-
-  responsibilities: [
-    "Develop and maintain accessible React applications using TypeScript",
-    "Collaborate with UX designers to implement inclusive design patterns",
-    "Write comprehensive tests and documentation for accessibility features",
-    "Mentor junior developers on accessibility best practices",
-    "Participate in code reviews with focus on WCAG compliance",
-    "Work with product managers to prioritize accessibility improvements",
-  ],
-
-  requirements: [
-    "5+ years of experience with React and modern JavaScript",
-    "Strong proficiency in TypeScript and modern CSS",
-    "Deep understanding of web accessibility standards (WCAG 2.1)",
-    "Experience with testing frameworks (Jest, React Testing Library)",
-    "Knowledge of assistive technologies and screen readers",
-    "Bachelor's degree in Computer Science or equivalent experience",
-  ],
-
-  preferred: [
-    "Experience with accessibility testing tools (axe, WAVE)",
-    "Knowledge of ARIA patterns and semantic HTML",
-    "Previous work on accessibility-focused projects",
-    "Familiarity with design systems and component libraries",
-    "Experience with performance optimization techniques",
-  ],
-
-  benefits: [
-    "Comprehensive health, dental, and vision insurance",
-    "Flexible work arrangements and remote work options",
-    "Professional development budget ($3,000 annually)",
-    "Accessibility equipment and software provided",
-    "Mental health support and wellness programs",
-    "Generous PTO and parental leave policies",
-    "Stock options and 401(k) matching",
-    "Inclusive and diverse work environment",
-  ],
-
-  companyInfo: {
-    about:
-      "TechCorp Inc. is a leading technology company committed to building accessible digital experiences. We believe that technology should be inclusive and work for everyone.",
-    culture:
-      "Our culture is built on innovation, inclusivity, and impact. We foster an environment where diverse perspectives are valued and accessibility is a core principle.",
-    values: ["Accessibility First", "Innovation", "Inclusivity", "Collaboration", "Impact"],
-  },
-
-  applicationProcess: [
-    "Submit your application through our accessible portal",
-    "Initial screening call with our recruiting team",
-    "Technical interview focusing on accessibility",
-    "Team interview and culture fit assessment",
-    "Final interview with hiring manager",
-    "Reference checks and offer",
-  ],
-}
+import { useJob, useJobActions } from "@/hooks/use-jobs"
+import { Job } from "@/types/job"
+import { toast } from "sonner"
+import { useParams } from "next/navigation"
 
 const accommodationIcons: Record<string, { icon: any; label: string; color: string; description: string }> = {
-  visual: {
-    icon: Eye,
-    label: "Visual accommodations",
+  FLEXIBLE_HOURS: {
+    icon: Clock,
+    label: "Flexible hours",
     color: "blue",
-    description: "Screen readers, high contrast displays, magnification software, and alternative text support",
+    description: "Flexible work schedules and timing arrangements to accommodate different needs",
   },
-  hearing: {
-    icon: Headphones,
-    label: "Hearing accommodations",
-    color: "purple",
-    description: "Sign language interpreters, captioning services, visual alerts, and hearing loop systems",
+  REMOTE_WORK: {
+    icon: Building2,
+    label: "Remote work",
+    color: "green",
+    description: "Work from home options and virtual collaboration tools",
   },
-  mobility: {
+  WHEELCHAIR_ACCESS: {
     icon: Accessibility,
-    label: "Mobility accommodations",
+    label: "Wheelchair accessible",
     color: "emerald",
-    description: "Ergonomic workstations, adjustable desks, accessible parking, and mobility device support",
+    description: "Wheelchair accessible facilities, ramps, elevators, and adapted workspaces",
   },
-  cognitive: {
+  SCREEN_READER: {
+    icon: Eye,
+    label: "Screen reader support",
+    color: "blue",
+    description: "Screen reader compatibility, alt text, and visual accessibility features",
+  },
+  SIGN_LANGUAGE: {
+    icon: Headphones,
+    label: "Sign language interpreters",
+    color: "purple",
+    description: "Sign language interpreters, captioning services, and visual communication aids",
+  },
+  QUIET_WORKSPACE: {
     icon: Brain,
-    label: "Cognitive accommodations",
+    label: "Quiet workspace",
     color: "amber",
-    description: "Flexible schedules, quiet workspaces, task management tools, and memory aids",
+    description: "Noise-controlled environments, quiet zones, and sensory-friendly spaces",
   },
-  motor: {
+  ERGONOMIC_EQUIPMENT: {
     icon: Hand,
-    label: "Motor accommodations",
+    label: "Ergonomic equipment",
     color: "rose",
-    description: "Alternative input devices, voice recognition software, and adaptive keyboards",
+    description: "Adjustable desks, ergonomic chairs, and specialized input devices",
   },
-  social: {
+  MODIFIED_DUTIES: {
     icon: Users,
-    label: "Social accommodations",
+    label: "Modified duties",
     color: "cyan",
-    description: "Structured communication, social skills support, and inclusive team activities",
+    description: "Flexible job responsibilities and task modifications based on individual needs",
+  },
+  EXTENDED_BREAKS: {
+    icon: Clock,
+    label: "Extended breaks",
+    color: "orange",
+    description: "Additional break time and flexible rest periods as needed",
+  },
+  TRANSPORTATION_ASSISTANCE: {
+    icon: Building2,
+    label: "Transportation assistance",
+    color: "indigo",
+    description: "Transportation support, accessible parking, and commute assistance",
   },
 }
 
 export default function JobDetailPage() {
+  const params = useParams()
+  const jobId = params.id as string
+  
+  const { job, loading, error, refetch } = useJob(jobId)
+  const { saveJob, unsaveJob, applyToJob, savedJobs } = useJobActions()
+  
   const [saved, setSaved] = useState(false)
   const [showApplicationModal, setShowApplicationModal] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
@@ -160,6 +118,48 @@ export default function JobDetailPage() {
     company: false,
     process: false,
   })
+
+  useEffect(() => {
+    if (jobId) {
+      refetch()
+    }
+  }, [jobId])
+
+  useEffect(() => {
+    if (job) {
+      setSaved(savedJobs.includes(job.id))
+    }
+  }, [job, savedJobs])
+
+  const handleSaveJob = async () => {
+    if (!job) return
+    
+    try {
+      if (saved) {
+        await unsaveJob(job.id)
+        setSaved(false)
+        toast.success("Job removed from saved jobs")
+      } else {
+        await saveJob(job.id)
+        setSaved(true)
+        toast.success("Job saved successfully")
+      }
+    } catch (error) {
+      toast.error("Failed to save job")
+    }
+  }
+
+  const handleApplyJob = async (applicationData: any) => {
+    if (!job) return
+    
+    try {
+      await applyToJob(job.id, applicationData)
+      setShowApplicationModal(false)
+      toast.success("Application submitted successfully")
+    } catch (error) {
+      toast.error("Failed to submit application")
+    }
+  }
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -175,42 +175,66 @@ export default function JobDetailPage() {
     return "from-rose-500 to-pink-500"
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading job details...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !job) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Job Not Found</h2>
+          <p className="text-muted-foreground mb-4">{error || "The job you're looking for doesn't exist."}</p>
+          <Button onClick={() => window.history.back()} className="rounded-full">
+            Go Back
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const mockMatchScore = Math.floor(Math.random() * 20) + 80
   const sections = [
     {
       key: "description" as const,
       title: "Job Description",
-      content: jobData.description,
+      content: job.description,
       type: "text",
     },
     {
       key: "responsibilities" as const,
       title: "Key Responsibilities",
-      content: jobData.responsibilities,
+      content: job.responsibilities,
       type: "list",
     },
     {
       key: "requirements" as const,
       title: "Requirements",
-      content: jobData.requirements,
+      content: job.requirements,
       type: "list",
     },
     {
       key: "benefits" as const,
       title: "Benefits & Perks",
-      content: jobData.benefits,
+      content: job.benefits,
       type: "list",
     },
     {
       key: "company" as const,
       title: "About the Company",
-      content: jobData.companyInfo,
+      content: {
+        about: job.company?.description || "A forward-thinking company committed to inclusive hiring practices.",
+        culture: "Our culture values diversity, inclusion, and creating accessible workplaces for all employees.",
+        values: ["Inclusion", "Innovation", "Accessibility", "Growth", "Impact"],
+      },
       type: "company",
-    },
-    {
-      key: "process" as const,
-      title: "Application Process",
-      content: jobData.applicationProcess,
-      type: "process",
     },
   ]
 
@@ -225,8 +249,9 @@ export default function JobDetailPage() {
           transition={{ duration: 0.5 }}
           className="py-5"
         >
-          <BackButton title={jobData.title} subtitle={jobData.company} />
+          <BackButton title={job.title} subtitle={job.company?.name || "Unknown Company"} />
         </motion.header>
+        
         {/* Job Header Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -239,19 +264,19 @@ export default function JobDetailPage() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-3xl font-bold mb-2 text-foreground">{jobData.title}</h1>
+                      <h1 className="text-3xl font-bold mb-2 text-foreground">{job.title}</h1>
                       <div className="flex items-center gap-4 text-muted-foreground mb-4">
                         <div className="flex items-center gap-1">
                           <Building2 className="h-4 w-4" />
-                          <span>{jobData.company}</span>
+                          <span>{job.company?.name || "Unknown Company"}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <MapPin className="h-4 w-4" />
-                          <span>{jobData.location}</span>
+                          <span>{job.location}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
-                          <span>{jobData.posted}</span>
+                          <span>{new Date(job.createdAt).toLocaleDateString()}</span>
                         </div>
                       </div>
                     </div>
@@ -259,12 +284,12 @@ export default function JobDetailPage() {
                     {/* Match Score */}
                     <div className="relative">
                       <motion.div
-                        className={`relative w-20 h-20 rounded-full bg-gradient-to-r ${getMatchColor(jobData.matchScore)} p-0.5`}
+                        className={`relative w-20 h-20 rounded-full bg-gradient-to-r ${getMatchColor(mockMatchScore)} p-0.5`}
                         whileHover={{ scale: 1.05 }}
                         transition={{ duration: 0.2 }}
                       >
                         <div className="w-full h-full bg-background rounded-full flex items-center justify-center">
-                          <span className="text-lg font-bold text-emerald-600">{jobData.matchScore}%</span>
+                          <span className="text-lg font-bold text-emerald-600">{mockMatchScore}%</span>
                         </div>
                       </motion.div>
                       <p className="text-xs text-center mt-2 text-muted-foreground">Match Score</p>
@@ -274,18 +299,22 @@ export default function JobDetailPage() {
                   <div className="flex flex-wrap gap-4 mb-6">
                     <div className="flex items-center gap-1 text-sm">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{jobData.salary}</span>
+                      <span className="font-medium">
+                        {job.salaryMin && job.salaryMax 
+                          ? `$${job.salaryMin.toLocaleString()} - $${job.salaryMax.toLocaleString()}`
+                          : "Salary not specified"}
+                      </span>
                     </div>
                     <Badge variant="outline" className="rounded-full">
-                      {jobData.type}
+                      {job.workType.replace("_", " ").toLowerCase()}
                     </Badge>
-                    {jobData.remote && (
+                    {job.isRemote && (
                       <Badge variant="secondary" className="bg-blue-100 text-blue-700 rounded-full">
                         Remote
                       </Badge>
                     )}
                     <Badge variant="outline" className="rounded-full">
-                      {jobData.experience}
+                      {job.experience.replace("_", " ").toLowerCase()}
                     </Badge>
                   </div>
 
@@ -297,45 +326,49 @@ export default function JobDetailPage() {
                         <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100 mb-1">
                           Why this is a great match
                         </p>
-                        <p className="text-sm text-emerald-700 dark:text-emerald-200">{jobData.matchReason}</p>
+                        <p className="text-sm text-emerald-700 dark:text-emerald-200">
+                          Great match based on your skills and the company's commitment to accessibility and inclusive hiring practices.
+                        </p>
                       </div>
                     </div>
                   </div>
 
                   {/* Accommodations */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold mb-3">Available Accommodations</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {jobData.accommodations.map((accommodation) => {
-                        const config = accommodationIcons[accommodation]
-                        if (!config) return null
+                  {job.accommodations.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="font-semibold mb-3">Available Accommodations</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {job.accommodations.map((accommodation) => {
+                          const config = accommodationIcons[accommodation]
+                          if (!config) return null
 
-                        const Icon = config.icon
-                        return (
-                          <motion.div key={accommodation} whileHover={{ scale: 1.02 }} className="group relative">
-                            <div
-                              className={`p-4 rounded-xl bg-${config.color}-50 dark:bg-${config.color}-950/20 border border-${config.color}-200 dark:border-${config.color}-800 hover:shadow-md transition-all`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <Icon className={`h-5 w-5 text-${config.color}-600`} />
-                                <div>
-                                  <p className="font-medium text-sm">{config.label}</p>
-                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                                    {config.description}
-                                  </p>
+                          const Icon = config.icon
+                          return (
+                            <motion.div key={accommodation} whileHover={{ scale: 1.02 }} className="group relative">
+                              <div
+                                className={`p-4 rounded-xl bg-${config.color}-50 dark:bg-${config.color}-950/20 border border-${config.color}-200 dark:border-${config.color}-800 hover:shadow-md transition-all`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Icon className={`h-5 w-5 text-${config.color}-600`} />
+                                  <div>
+                                    <p className="font-medium text-sm">{config.label}</p>
+                                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                      {config.description}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </motion.div>
-                        )
-                      })}
+                            </motion.div>
+                          )
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 ">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <Button
                   onClick={() => setShowApplicationModal(true)}
                   className="flex-1 bg-primary text-white rounded-xl py-5 text-md font-semibold"
@@ -346,7 +379,7 @@ export default function JobDetailPage() {
                 <div className="flex gap-3">
                   <Button
                     variant="outline"
-                    onClick={() => setSaved(!saved)}
+                    onClick={handleSaveJob}
                     className={`rounded-xl transition-colors h-full ${saved ? "text-red-500 border-red-200 hover:bg-red-200 hover:text-red-500" : ""
                       }`}
                   >
@@ -360,7 +393,7 @@ export default function JobDetailPage() {
                   <Button
                     variant="outline"
                     onClick={() => setShowReportModal(true)}
-                    className="rounded-xl px-6 text-muted-foreground hover:text-red-500 h-full "
+                    className="rounded-xl px-6 text-muted-foreground hover:text-red-500 h-full"
                   >
                     <Flag className="h-4 w-4" />
                   </Button>
@@ -504,18 +537,35 @@ export default function JobDetailPage() {
       </div>
 
       {/* Modals */}
-      <ApplicationModal isOpen={showApplicationModal} onClose={() => setShowApplicationModal(false)} job={jobData} />
+      <ApplicationModal 
+        isOpen={showApplicationModal} 
+        onClose={() => setShowApplicationModal(false)} 
+        job={{
+          id: job.id,
+          title: job.title,
+          company: job.company?.name || "Unknown Company",
+          location: job.location,
+        }}
+        onSubmit={handleApplyJob}
+      />
 
       <ShareModal
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
-        job={{ title: jobData.title, company: jobData.company, url: jobData.id }}
+        job={{ 
+          title: job.title, 
+          company: job.company?.name || "Unknown Company", 
+          url: job.id 
+        }}
       />
 
       <ReportModal
         isOpen={showReportModal}
         onClose={() => setShowReportModal(false)}
-        job={{ title: jobData.title, company: jobData.company }}
+        job={{ 
+          title: job.title, 
+          company: job.company?.name || "Unknown Company" 
+        }}
       />
     </div>
   )

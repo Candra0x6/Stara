@@ -55,7 +55,6 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-    //   @ts-ignore
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
@@ -93,15 +92,15 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
-    maxAge: 7 * 24 * 60 * 60, // 7 days for remember me, will be overridden per request
+    maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   pages: {
     signIn: "/auth",
     signOut: "/auth",
   },
-  secret: process.env.NEXT_AUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -111,6 +110,27 @@ export const authOptions: NextAuthOptions = {
         token.firstName = (user as any).firstName;
         token.lastName = (user as any).lastName;
         token.isProfileComplete = (user as any).isProfileComplete;
+
+        // Create database session for credentials login
+        if (account?.provider === "credentials") {
+          try {
+            const sessionExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+            const sessionToken = crypto.randomUUID();
+            
+            await prisma.session.create({
+              data: {
+                sessionToken,
+                userId: user.id,
+                expires: sessionExpires,
+              },
+            });
+            
+            // Store session token in JWT for reference
+            token.sessionToken = sessionToken;
+          } catch (error) {
+            console.error("Failed to create database session:", error);
+          }
+        }
       }
       return token;
     },
@@ -127,18 +147,47 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      // Handle sign-out
-      if (url.startsWith(baseUrl + "/setting")) {
-        return "/auth"; // Redirect to auth page after sign-out
+    async signOut({ token }) {
+      // Clean up database session on sign out
+      if (token.sessionToken) {
+        try {
+          await prisma.session.delete({
+            where: {
+              sessionToken: token.sessionToken as string,
+            },
+          });
+        } catch (error) {
+          console.error("Failed to delete database session:", error);
+        }
       }
-
-      // Handle sign-in
-      if (url.startsWith(baseUrl + "/auth")) {
-        return "/profile-setup"; // Redirect to profile setup after sign-in
+    },
+    async redirect({ url, baseUrl }) {
+      const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+      
+      if (url.startsWith('/')) {
+        url = base + url;
       }
       
-      return "/profile-setup"; // Default redirect
+      if (url.includes('/setting') || url.includes('signout')) {
+        return `${base}/auth`;
+      }
+
+      if (url.includes('/auth') && !url.includes('error')) {
+        return `${base}/profile-setup`;
+      }
+      
+      try {
+        const urlObj = new URL(url);
+        const baseObj = new URL(base);
+        
+        if (urlObj.origin === baseObj.origin) {
+          return url;
+        }
+      } catch (error) {
+        console.error('Invalid URL in redirect callback:', error);
+      }
+      
+      return `${base}/profile-setup`;
     },
   },
 };
