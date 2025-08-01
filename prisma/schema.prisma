@@ -89,6 +89,12 @@ model User {
   savedJobs      SavedJob[]
   jobRecommendationRatings JobRecommendationRating[]
 
+  // CV-related relations
+  cvFiles        CVFile[]
+  cvVersions     CVVersion[]
+  cvShares       CVShare[]
+  cvComments     CVComment[]
+
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   deletedAt       DateTime?
@@ -421,4 +427,224 @@ enum ApplicationStatus {
   ACCEPTED
   REJECTED
   WITHDRAWN
+}
+
+/// CV/Resume models for file management and editing
+model CVFile {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  type            CVFileType      @default(RESUME)
+  
+  // Owner relation
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // File metadata
+  description     String?         @db.Text
+  tags            String[]        @default([])
+  isPublic        Boolean         @default(false)
+  isTemplate      Boolean         @default(false)
+  
+  // Content structure
+  sections        CVSection[]
+  
+  // File management
+  version         Int             @default(1)
+  size            Int?            // File size in bytes
+  
+  // Status and visibility
+  status          CVFileStatus    @default(DRAFT)
+  isActive        Boolean         @default(true)
+  
+  // Sharing and collaboration
+  shareToken      String?         @unique
+  allowComments   Boolean         @default(false)
+  
+  // Analytics
+  viewCount       Int             @default(0)
+  downloadCount   Int             @default(0)
+  
+  // Relations
+  shares          CVShare[]
+  comments        CVComment[]
+  versions        CVVersion[]
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  lastEditedAt    DateTime        @default(now())
+  publishedAt     DateTime?
+  
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([isPublic])
+  @@index([isTemplate])
+  @@index([shareToken])
+}
+
+/// CV Section model for structured content
+model CVSection {
+  id              String          @id @default(cuid())
+  cvFileId        String
+  cvFile          CVFile          @relation(fields: [cvFileId], references: [id], onDelete: Cascade)
+  
+  // Section details
+  type            CVSectionType
+  title           String
+  content         Json            // Flexible JSON content for different section types
+  order           Int             @default(0)
+  
+  // Visibility and formatting
+  isVisible       Boolean         @default(true)
+  styles          Json?           // Custom styling options
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([cvFileId])
+  @@index([type])
+  @@index([order])
+}
+
+/// CV Version model for version control
+model CVVersion {
+  id              String          @id @default(cuid())
+  cvFileId        String
+  cvFile          CVFile          @relation(fields: [cvFileId], references: [id], onDelete: Cascade)
+  
+  // Version details
+  version         Int
+  title           String?
+  description     String?         @db.Text
+  
+  // Content snapshot
+  sectionsData    Json            // Snapshot of all sections at this version
+  
+  // Author
+  createdBy       String
+  author          User            @relation(fields: [createdBy], references: [id])
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  
+  @@unique([cvFileId, version])
+  @@index([cvFileId])
+  @@index([createdBy])
+}
+
+/// CV Sharing model for collaborative features
+model CVShare {
+  id              String          @id @default(cuid())
+  cvFileId        String
+  cvFile          CVFile          @relation(fields: [cvFileId], references: [id], onDelete: Cascade)
+  
+  // Sharing details
+  shareToken      String          @unique
+  shareType       CVShareType     @default(VIEW)
+  permissions     CVPermission[]  @default([])
+  
+  // Recipient (optional - can be anonymous sharing)
+  sharedWithId    String?
+  sharedWith      User?           @relation(fields: [sharedWithId], references: [id])
+  
+  // Sharing metadata
+  expiresAt       DateTime?
+  maxViews        Int?
+  viewCount       Int             @default(0)
+  
+  // Settings
+  allowDownload   Boolean         @default(false)
+  allowComments   Boolean         @default(false)
+  requireAuth     Boolean         @default(false)
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  lastAccessedAt  DateTime?
+  
+  @@index([cvFileId])
+  @@index([shareToken])
+  @@index([sharedWithId])
+}
+
+/// CV Comments model for feedback
+model CVComment {
+  id              String          @id @default(cuid())
+  cvFileId        String
+  cvFile          CVFile          @relation(fields: [cvFileId], references: [id], onDelete: Cascade)
+  
+  // Author
+  authorId        String
+  author          User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  // Comment content
+  content         String          @db.Text
+  sectionId       String?         // Optional: comment on specific section
+  
+  // Comment metadata
+  isResolved      Boolean         @default(false)
+  
+  // Threading
+  parentId        String?
+  parent          CVComment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies         CVComment[]     @relation("CommentReplies")
+  
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([cvFileId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+/// CV File type enum
+enum CVFileType {
+  RESUME
+  CV
+  PORTFOLIO
+  TEMPLATE
+  COMPONENT
+}
+
+/// CV File status enum
+enum CVFileStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+/// CV Section type enum
+enum CVSectionType {
+  PERSONAL_INFO
+  SUMMARY
+  EXPERIENCE
+  EDUCATION
+  SKILLS
+  PROJECTS
+  CERTIFICATIONS
+  LANGUAGES
+  INTERESTS
+  REFERENCES
+  CUSTOM
+}
+
+/// CV Share type enum
+enum CVShareType {
+  VIEW
+  EDIT
+  COMMENT
+}
+
+/// CV Permission enum
+enum CVPermission {
+  READ
+  WRITE
+  COMMENT
+  SHARE
+  DELETE
+  ADMIN
 }

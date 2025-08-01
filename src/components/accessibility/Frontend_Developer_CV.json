@@ -1,0 +1,80 @@
+{
+  "id": "frontend-cv",
+  "name": "Frontend_Developer_CV.cv",
+  "type": "resume",
+  "lastModified": "2025-08-01T07:55:41.993Z",
+  "versions": 5,
+  "data": [
+    {
+      "id": "personal",
+      "type": "personal",
+      "title": "Personal Information",
+      "order": 1,
+      "content": {
+        "name": "Alex Johnsonss",
+        "title": "Senior Frontend Developer",
+        "email": "alex.johnson@email.com",
+        "phone": "+1 (555) 123-4567",
+        "location": "San Francisco, CA",
+        "website": "alexjohnson.dev",
+        "linkedin": "linkedin.com/in/alexjohnson",
+        "github": "github.com/alexjohnson"
+      }
+    },
+    {
+      "id": "experience",
+      "type": "experience",
+      "title": "Work Experience",
+      "order": 2,
+      "content": [
+        {
+          "id": "exp1",
+          "company": "TechCorp Inc.",
+          "position": "Senior Frontend Developer",
+          "location": "San Francisco, CA",
+          "startDate": "Jan 2022",
+          "endDate": "Present",
+          "description": [
+            "Led development of accessible React applications serving 2M+ users",
+            "Implemented design system reducing development time by 40%",
+            "Mentored 5 junior developers on modern frontend practices",
+            "Collaborated with UX team to improve user experience metrics by 25%"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "skills",
+      "type": "skills",
+      "title": "Technical Skills",
+      "order": 3,
+      "content": {
+        "languages": [
+          "JavaScript",
+          "TypeScript",
+          "HTML",
+          "CSS"
+        ],
+        "frameworks": [
+          "React",
+          "Next.js",
+          "Vue.js",
+          "Tailwind CSS"
+        ],
+        "tools": [
+          "Git",
+          "Webpack",
+          "Figma",
+          "Jest"
+        ],
+        "other": [
+          "Accessibility",
+          "Performance Optimization",
+          "SEO"
+        ]
+      }
+    }
+  ],
+  "exportDate": "2025-08-01T09:56:25.210Z",
+  "version": "1.0"
+}
