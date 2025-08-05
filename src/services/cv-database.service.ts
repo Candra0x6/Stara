@@ -52,6 +52,7 @@ export interface CVFileWithSections {
   isTemplate: boolean
   version: number
   status: string
+  templateId?: string
   sections: Array<{
     id: string
     type: string

@@ -12,7 +12,7 @@ import prisma from '@/lib/prisma';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -209,10 +209,11 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
+    const { userId } = await params;
     
     if (!session?.user) {
       return NextResponse.json(
@@ -221,7 +222,6 @@ export async function POST(
       );
     }
 
-    const { userId } = await params;
 
     // Check if user can update recommendations (own recommendations only)
     if (session.user.id !== userId) {
@@ -290,10 +290,11 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
+    const { userId } = await params;
     
     if (!session?.user) {
       return NextResponse.json(
@@ -302,7 +303,6 @@ export async function DELETE(
       );
     }
 
-    const { userId } = await params;
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
 

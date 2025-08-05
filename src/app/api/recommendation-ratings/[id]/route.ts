@@ -4,9 +4,9 @@ import { RecommendationRatingService } from "@/lib/services/recommendation-ratin
 import { UpdateRecommendationRatingSchema } from "@/lib/validations/recommendation-rating";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 // GET /api/recommendation-ratings/[id] - Get a specific recommendation rating
@@ -16,6 +16,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession();
+    const { id } = await params;
     if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -23,7 +24,7 @@ export async function GET(
       );
     }
 
-    const rating = await RecommendationRatingService.getRecommendationRatingById(params.id);
+    const rating = await RecommendationRatingService.getRecommendationRatingById(id);
     
     if (!rating) {
       return NextResponse.json(
@@ -50,6 +51,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession();
+    const { id } = await params;
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -61,7 +63,7 @@ export async function PUT(
     const validatedData = UpdateRecommendationRatingSchema.parse(body);
     
     const rating = await RecommendationRatingService.updateRecommendationRating(
-      params.id,
+      id,
       session.user.id,
       validatedData
     );
@@ -105,6 +107,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession();
+    const { id } = await params;
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -113,7 +116,7 @@ export async function DELETE(
     }
 
     await RecommendationRatingService.deleteRecommendationRating(
-      params.id,
+      id,
       session.user.id
     );
     

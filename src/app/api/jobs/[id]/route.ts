@@ -5,9 +5,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(
@@ -15,8 +15,9 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const job = await prisma.job.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         company: {
           select: {
@@ -52,7 +53,7 @@ export async function GET(
 
     // Increment view count
     await prisma.job.update({
-      where: { id: params.id },
+      where: { id },
       data: { viewCount: { increment: 1 } }
     })
 
@@ -76,6 +77,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user) {
       return NextResponse.json(
@@ -85,11 +87,11 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const validatedData = UpdateJobSchema.parse({ ...body, id: params.id })
+    const validatedData = UpdateJobSchema.parse({ ...body, id })
 
     // Check if job exists
     const existingJob = await prisma.job.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { company: true }
     })
 
@@ -102,7 +104,7 @@ export async function PUT(
 
     // Update job
     const job = await prisma.job.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         applicationDeadline: validatedData.applicationDeadline 
@@ -151,6 +153,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user) {
       return NextResponse.json(
@@ -161,7 +164,7 @@ export async function DELETE(
 
     // Check if job exists
     const existingJob = await prisma.job.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingJob) {
@@ -173,7 +176,7 @@ export async function DELETE(
 
     // Delete job (this will cascade to related records)
     await prisma.job.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

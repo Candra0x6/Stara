@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Search, MapPin, Filter, Accessibility, Headphones, Eye, Hand, Brain, Users, Clock, Building2 } from "lucide-react"
-import { JobFilters, WorkType, Experience, AccommodationType } from "@/types/job"
+import { Search, MapPin, Filter, Accessibility, Headphones, Eye, Hand, Brain, Users, Clock, Building2, Heart, MessageSquare } from "lucide-react"
+import { JobFilters } from "@/types/job"
+import { AccommodationType, ExperienceLevel, WorkType } from "@prisma/client"
 
 interface FilterSidebarProps {
   filters: JobFilters
@@ -21,30 +22,32 @@ const workTypes: { value: WorkType; label: string }[] = [
   { value: "PART_TIME", label: "Part-time" },
   { value: "CONTRACT", label: "Contract" },
   { value: "FREELANCE", label: "Freelance" },
-  { value: "INTERNSHIP", label: "Internship" },
-  { value: "TEMPORARY", label: "Temporary" },
+  { value : "REMOTE", label: "Remote" },
+  { value: "ON_SITE", label: "On-site" },
+  { value: "HYBRID", label: "Hybrid" },
+
 ]
 
-const experienceLevels: { value: Experience; label: string }[] = [
-  { value: "ENTRY", label: "Entry Level" },
+const experienceLevels: { value: ExperienceLevel; label: string }[] = [
   { value: "JUNIOR", label: "Junior" },
-  { value: "MID", label: "Mid Level" },
+  { value : "ENTRY_LEVEL", label: "Entry Level" },
+  { value: "MID_LEVEL", label: "Mid Level" },
   { value: "SENIOR", label: "Senior" },
   { value: "LEAD", label: "Lead" },
   { value: "EXECUTIVE", label: "Executive" },
 ]
 
 const accommodationOptions: { id: AccommodationType; label: string; icon: any }[] = [
-  { id: "FLEXIBLE_HOURS", label: "Flexible hours", icon: Clock },
-  { id: "REMOTE_WORK", label: "Remote work", icon: Building2 },
-  { id: "WHEELCHAIR_ACCESS", label: "Wheelchair access", icon: Accessibility },
-  { id: "SCREEN_READER", label: "Screen reader support", icon: Eye },
-  { id: "SIGN_LANGUAGE", label: "Sign language interpreters", icon: Headphones },
-  { id: "QUIET_WORKSPACE", label: "Quiet workspace", icon: Brain },
-  { id: "ERGONOMIC_EQUIPMENT", label: "Ergonomic equipment", icon: Hand },
-  { id: "MODIFIED_DUTIES", label: "Modified duties", icon: Users },
-  { id: "EXTENDED_BREAKS", label: "Extended breaks", icon: Clock },
-  { id: "TRANSPORTATION_ASSISTANCE", label: "Transportation assistance", icon: Building2 },
+  { id: "VISUAL", label: "Visual accommodations", icon: Eye },
+  { id: "HEARING", label: "Hearing accommodations", icon: Headphones },
+  { id: "MOBILITY", label: "Mobility accommodations", icon: Accessibility },
+  { id: "COGNITIVE", label: "Cognitive accommodations", icon: Brain },
+  { id: "MOTOR", label: "Motor accommodations", icon: Hand },
+  { id: "SOCIAL", label: "Social accommodations", icon: Users },
+  { id: "SENSORY", label: "Sensory accommodations", icon: Building2 },
+  { id: "COMMUNICATION", label: "Communication accommodations", icon: MessageSquare },
+  { id: "LEARNING", label: "Learning accommodations", icon: Brain },
+  { id: "MENTAL_HEALTH", label: "Mental health accommodations", icon: Heart },
 ]
 
 export default function FilterSidebar({ filters, onFiltersChange, jobCount }: FilterSidebarProps) {
@@ -71,7 +74,6 @@ export default function FilterSidebar({ filters, onFiltersChange, jobCount }: Fi
       salaryMin: undefined,
       salaryMax: undefined,
       companySize: undefined,
-      tags: [],
       page: 1,
     })
   }
@@ -91,9 +93,11 @@ export default function FilterSidebar({ filters, onFiltersChange, jobCount }: Fi
       initial={{ x: -300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
-      className="w-80 h-fit sticky top-4"
+      className="w-80 h-fit sticky top-4 accessibility-text md:flex md:flex-col hidden"
+      role="complementary"
+      aria-label="Job filters"
     >
-      <Card className="rounded-2xl overflow-hidden">
+      <Card className="rounded-2xl overflow-hidden click-assist py-4">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -124,7 +128,6 @@ export default function FilterSidebar({ filters, onFiltersChange, jobCount }: Fi
           <div className="space-y-2">
             <Label htmlFor="search">Search Jobs</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="search"
                 placeholder="Job title, company, keywords..."
@@ -139,7 +142,6 @@ export default function FilterSidebar({ filters, onFiltersChange, jobCount }: Fi
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 id="location"
                 placeholder="City, state, or remote"

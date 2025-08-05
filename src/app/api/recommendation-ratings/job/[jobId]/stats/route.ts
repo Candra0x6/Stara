@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import { RecommendationRatingService } from "@/lib/services/recommendation-rating.service";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     jobId: string;
-  };
+  }>;
 }
 
 // GET /api/recommendation-ratings/job/[jobId]/stats - Get job's rating statistics
@@ -15,6 +15,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession();
+    const { jobId } = await params;
     if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -22,7 +23,7 @@ export async function GET(
       );
     }
 
-    const stats = await RecommendationRatingService.getJobRatingStats(params.jobId);
+    const stats = await RecommendationRatingService.getJobRatingStats(jobId);
     
     return NextResponse.json(stats);
   } catch (error) {

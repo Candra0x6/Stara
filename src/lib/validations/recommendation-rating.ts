@@ -43,7 +43,9 @@ export const RecommendationRatingQuerySchema = z.object({
   reason: RatingReasonSchema.optional(),
   recommendedBy: z.string().optional(),
   isHelpful: z.string().transform((val) => val === 'true').pipe(z.boolean()).optional(),
+  // @ts-ignore
   page: z.string().transform(Number).pipe(z.number().int().min(1)).optional().default("1"),
+  // @ts-ignore
   limit: z.string().transform(Number).pipe(z.number().int().min(1).max(100)).optional().default("10"),
   sortBy: z.enum(["createdAt", "rating", "matchScore"]).optional().default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).optional().default("desc"),

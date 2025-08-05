@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthSession } from '@/lib/auth'
+import { authOptions, getAuthSession } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import prisma from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
 
 // Get user from API session or NextAuth session
 async function getAuthenticatedUser() {
@@ -76,7 +77,7 @@ export async function GET() {
 export async function PUT(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser()
-    
+    const session = await getServerSession(authOptions)
     if (!user?.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -89,7 +90,8 @@ export async function PUT(request: NextRequest) {
     
     // Update user and profile data
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+
+      where: { id: session?.user?.id  },
       data: {
         ...userData,
         isProfileComplete: true,

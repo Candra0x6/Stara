@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function ProfileSetupPage() {
   return (
-    <main className="min-h-screen bg-white font-inter">
+    <main className="min-h-screen bg-white font-inter accessibility-text click-assist" role="main" aria-label="Profile Setup">
       <div className="container mx-auto px-4 py-8">
        
         

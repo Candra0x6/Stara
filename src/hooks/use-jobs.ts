@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { JobFilters, JobSearchResponse, Job } from '@/types/job'
-import { Company } from '@prisma/client'
+import { JobComplete, JobFilters, JobSearchResponse } from '@/types/job'
+import { Company, Job } from '@prisma/client'
 
 export type JobWithCompany = Job & {
   company: Company & {
@@ -39,12 +39,12 @@ const fetchFilteredJobs = useCallback(async (filtersToUse: JobFilters) => {
     if (!response.ok) {
       throw new Error(`Failed to fetch jobs: ${response.statusText}`)
     }
-    
-    const data: JobSearchResponse = await response.json()
-    
-    setJobs(data.data.jobs)
-    setTotal(data.total)
-    setTotalPages(data.totalPages)
+
+    const data:  { data: JobSearchResponse} = await response.json()
+
+    setJobs(data.data.jobs as JobWithCompany[])
+    setTotal(data.data.total)
+    setTotalPages(data.data.totalPages)
   } catch (err) {
     setError(err instanceof Error ? err.message : 'Failed to fetch jobs')
     setJobs([])
@@ -77,10 +77,10 @@ const fetchFilteredJobs = useCallback(async (filtersToUse: JobFilters) => {
         throw new Error(`Failed to fetch jobs: ${response.statusText}`)
       }
 
-      const data: JobSearchResponse = await response.json()
-      setJobs(data.jobs)
-      setTotal(data.total)
-      setTotalPages(data.totalPages)
+      const data: { data: JobSearchResponse } = await response.json()
+      setJobs(data.data.jobs as JobWithCompany[])
+      setTotal(data.data.total)
+      setTotalPages(data.data.totalPages)
       if (newFilters) {
         setFilters({ ...filters, ...newFilters })
       }
@@ -128,7 +128,7 @@ useEffect(() => {
 }
 
 export function useJob(jobId: string) {
-  const [job, setJob] = useState<Job | null>(null)
+  const [job, setJob] = useState<JobComplete | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -146,7 +146,7 @@ export function useJob(jobId: string) {
       }
       
       const data = await response.json()
-      setJob(data)
+      setJob(data.data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch job')
       setJob(null)

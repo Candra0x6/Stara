@@ -19,7 +19,7 @@ import { useSession } from 'next-auth/react'
 export default function Home() {
 
   return (
-    <div className="max-w- mx-auto px-4 py-6">
+    <main className="max-w- mx-auto px-4 py-6 accessibility-text click-assist" role="main" aria-label="Home page">
       <WithImageTiles />
       <AccessibilityFeatures />
       <SimpleThreeColumnWithLargeIcons />
@@ -28,6 +28,6 @@ export default function Home() {
       <FrequentlyAskedQuestionsAccordion />
       <SimpleCenteredCTA />
       <AccessibleFooter />
-    </div>
+    </main>
   )
 }

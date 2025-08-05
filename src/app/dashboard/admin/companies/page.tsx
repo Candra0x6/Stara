@@ -40,7 +40,7 @@ export default function AdminCompaniesPage() {
       if (selectedCompany) {
         await updateCompany(selectedCompany.id, data)
       } else {
-        await createCompany(data)
+        await createCompany(data as CreateCompanyData)
       }
     } catch (error) {
       throw error

@@ -3,9 +3,9 @@ import { getServerSession } from "next-auth";
 import { RecommendationRatingService } from "@/lib/services/recommendation-rating.service";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     userId: string;
-  };
+  }>;
 }
 
 // GET /api/recommendation-ratings/user/[userId]/stats - Get user's rating statistics
@@ -15,6 +15,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession();
+    const { userId } = await params;
     if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -23,14 +24,14 @@ export async function GET(
     }
 
     // Users can only access their own stats unless they're admin
-    if (session.user.id !== params.userId && session.user.role !== "ADMIN") {
+    if (session.user.id !== userId && session.user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Forbidden: You can only access your own statistics" },
         { status: 403 }
       );
     }
 
-    const stats = await RecommendationRatingService.getUserRatingStats(params.userId);
+    const stats = await RecommendationRatingService.getUserRatingStats(userId);
     
     return NextResponse.json(stats);
   } catch (error) {

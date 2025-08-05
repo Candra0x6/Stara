@@ -135,6 +135,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
     if (!min && !max) return 'Salary not specified';
     if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} ${currency}`;
     if (min) return `From $${min.toLocaleString()} ${currency}`;
+    // @ts-ignore
     return `Up to $${max.toLocaleString()} ${currency}`;
   };
 
@@ -209,7 +210,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto accessibility-text click-assist" role="main" aria-label="Job Recommendations">
       {/* Header */}
       <div className="">
         <BackButton title='Back to Job Listings' subtitle='Return to the main job listings page ' />

@@ -5,9 +5,9 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export async function GET(
@@ -15,8 +15,9 @@ export async function GET(
   { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const company = await prisma.company.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         jobs: {
           where: {
@@ -82,6 +83,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user) {
       return NextResponse.json(
@@ -95,7 +97,7 @@ export async function PUT(
 
     // Check if company exists
     const existingCompany = await prisma.company.findUnique({
-      where: { id: params.id }
+      where: { id }
     })
 
     if (!existingCompany) {
@@ -107,7 +109,7 @@ export async function PUT(
 
     // Update company
     const company = await prisma.company.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         updatedAt: new Date()
@@ -141,6 +143,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user) {
       return NextResponse.json(
@@ -151,7 +154,7 @@ export async function DELETE(
 
     // Check if company exists
     const existingCompany = await prisma.company.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: { jobs: true }
@@ -176,7 +179,7 @@ export async function DELETE(
 
     // Delete company
     await prisma.company.delete({
-      where: { id: params.id }
+      where: { id }
     })
 
     return NextResponse.json({

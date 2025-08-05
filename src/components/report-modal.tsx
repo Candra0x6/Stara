@@ -8,11 +8,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { AlertTriangle, CheckCircle, Accessibility, FileX, AlertCircle, SpellCheckIcon as Spam } from "lucide-react"
+import { useApplicationActions } from "@/hooks/use-job-applications"
 
 interface ReportModalProps {
   isOpen: boolean
   onClose: () => void
   job: {
+    id?: string
     title: string
     company: string
   }
@@ -55,24 +57,37 @@ export default function ReportModal({ isOpen, onClose, job }: ReportModalProps) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
+  const { reportIssue } = useApplicationActions()
+
   const handleSubmit = async () => {
-    if (!reportType) return
+    if (!reportType || !description.trim()) return
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      await reportIssue({
+        type: "job",
+        targetId: job.id || "unknown",
+        reportType: reportType as any,
+        description: description.trim()
+      })
 
-    setIsSubmitting(false)
-    setSubmitted(true)
+      setSubmitted(true)
 
-    // Auto close after success
-    setTimeout(() => {
-      onClose()
-      setSubmitted(false)
-      setReportType("")
-      setDescription("")
-    }, 3000)
+      // Auto close after success
+      setTimeout(() => {
+        onClose()
+        setSubmitted(false)
+        setReportType("")
+        setDescription("")
+      }, 3000)
+
+    } catch (error) {
+      console.error("Report submission failed:", error)
+      // Error is already handled by the hook and toast is shown
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -181,7 +196,7 @@ export default function ReportModal({ isOpen, onClose, job }: ReportModalProps) 
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!reportType || isSubmitting}
+              disabled={!reportType || !description.trim() || isSubmitting}
               className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white rounded-xl"
             >
               {isSubmitting ? (

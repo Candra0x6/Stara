@@ -10,7 +10,7 @@ interface BackButtonProps {
 function BackButton({ title, subtitle }: BackButtonProps) {
     return (
         <div className="flex items-center gap-4 py-5">
-            <Button variant="ghost" size="sm" className="text-white py-5 w-12" onClick={() => window.history.back()}>
+            <Button variant="ghost" size="sm" className=" py-5 w-12" onClick={() => window.history.back()}>
                 <ArrowLeft className="h-6 w-6 " />
             </Button>
             <div>

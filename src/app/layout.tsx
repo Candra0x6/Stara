@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Navbar } from "@/components/ui/resizable-navbar";
-import { NavbarWithChildren } from "@/components/blocks/navbars/navbar-with-children";
 import ClientProvider from "@/components/providers/client-provider";
 import AuthProvider from "@/components/providers/auth-provider";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { Toaster } from "sonner";
+import AccessibilityStyles from "@/components/accessibility/accessibility-styles";
+import AccessibilityButton from "@/components/accessibility/accessibility-button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,13 +32,16 @@ export default async function RootLayout({
   const session = await getServerSession(authOptions);
   console.log("Session in RootLayout:", session);
   return (
-    <html lang="en">
+    <html lang="en" className="accessibility-text">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased  `}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased accessibility-text`}
       >
+        <AccessibilityStyles />
         <AuthProvider session={session}>
           <ClientProvider />
-          {children}
+          <div id="main-content" className="overflow-hidden">
+            {children}
+          </div>
           <Toaster />
         </AuthProvider>
       </body>

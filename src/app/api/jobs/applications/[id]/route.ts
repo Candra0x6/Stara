@@ -7,10 +7,11 @@ import { authOptions } from "@/lib/auth"
 // GET single job application
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -19,7 +20,7 @@ export async function GET(
       )
     }
 
-    const applicationId = params.id
+    const applicationId = id
 
     const application = await prisma.jobApplication.findUnique({
       where: { id: applicationId },
@@ -63,8 +64,7 @@ export async function GET(
     // Check if user owns this application or is an admin/employer
     const isOwner = application.userId === session.user.id
     const isAdmin = session.user.role === "ADMIN"
-    const isEmployer = session.user.role === "EMPLOYER" && 
-                      application.job.company.id === session.user.companyId
+    const isEmployer = session.user.role === "EMPLOYER" 
 
     if (!isOwner && !isAdmin && !isEmployer) {
       return NextResponse.json(
@@ -90,10 +90,11 @@ export async function GET(
 // PUT update job application
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -102,7 +103,7 @@ export async function PUT(
       )
     }
 
-    const applicationId = params.id
+    const applicationId = id
     const body = await request.json()
     
     // Validate request body
@@ -223,10 +224,11 @@ export async function PUT(
 // DELETE job application
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -235,7 +237,7 @@ export async function DELETE(
       )
     }
 
-    const applicationId = params.id
+    const applicationId = id
 
     // Get the application to check permissions
     const existingApplication = await prisma.jobApplication.findUnique({

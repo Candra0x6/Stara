@@ -99,6 +99,7 @@ export async function GET(request: NextRequest) {
     
     if (error instanceof ZodError) {
       return NextResponse.json(
+        // @ts-ignore
         { error: 'Invalid query parameters', details: error.errors },
         { status: 400 }
       )

@@ -91,9 +91,9 @@ export default function JobDashboard() {
   ]
 
   return (
-    <div className="min-h-screen bg-background max-w-7xl mx-auto pt-10">
+    <main className="min-h-screen bg-background max-w-7xl mx-auto pt-10 accessibility-text click-assist" role="main" aria-label="Job Search">
 
-      <div className="container max mx-auto px-4 py-6 ">
+      <div className="w-full mx-auto px-4 py-6">
     
 
         <div className="flex gap-6">
@@ -132,13 +132,7 @@ export default function JobDashboard() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="flex items-center justify-between mb-6"
             >
-              <div className="flex items-center gap-4">
-                <h2 className="text-2xl font-semibold text-black">
-                  {loading ? "Loading Jobs..." : `${total} Jobs Found`}
-                </h2>
-                {loading && <Loader2 className="h-5 w-5 animate-spin" />}
-              </div>
-
+           
               <div className="flex items-center gap-2">
                 {/* Sort Dropdown */}
                 <div className="relative">
@@ -287,6 +281,6 @@ export default function JobDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   )
 }

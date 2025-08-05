@@ -18,15 +18,15 @@ const UpdateUserSchema = z.object({
 // GET single user (admin only)
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
+    const id = (await params).id
     // Check if user is admin or requesting their own data
     const isAdmin = session?.user?.role === "ADMIN"
-    const isOwnData = session?.user?.id === params.id
-    
+    const isOwnData = session?.user?.id === id
+
     if (!session?.user?.id || (!isAdmin && !isOwnData)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -34,7 +34,7 @@ export async function GET(
       )
     }
 
-    const userId = params.id
+    const userId = id
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -99,14 +99,15 @@ export async function GET(
 // PUT update user (admin only or own data)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     // Check if user is admin or updating their own data
     const isAdmin = session?.user?.role === "ADMIN"
-    const isOwnData = session?.user?.id === params.id
+    const isOwnData = session?.user?.id === id
     
     if (!session?.user?.id || (!isAdmin && !isOwnData)) {
       return NextResponse.json(
@@ -115,7 +116,7 @@ export async function PUT(
       )
     }
 
-    const userId = params.id
+    const userId = id
     const body = await request.json()
     
     // Validate request body
@@ -211,10 +212,11 @@ export async function PUT(
 // DELETE user (admin only)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     // Check if user is admin
     if (!session?.user?.id || session.user.role !== "ADMIN") {
@@ -224,7 +226,7 @@ export async function DELETE(
       )
     }
 
-    const userId = params.id
+    const userId = id
 
     // Don't allow admin to delete themselves
     if (userId === session.user.id) {

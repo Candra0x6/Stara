@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth";
 import { RecommendationRatingService } from "@/lib/services/recommendation-rating.service";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     userId: string;
     jobId: string;
-  };
+  }>;
 }
 
 // GET /api/recommendation-ratings/user/[userId]/job/[jobId] - Get rating by user and job
@@ -16,6 +16,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession();
+    const { userId, jobId } = await params;
     if (!session?.user) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -24,7 +25,7 @@ export async function GET(
     }
 
     // Users can only access their own ratings unless they're admin
-    if (session.user.id !== params.userId && session.user.role !== "ADMIN") {
+    if (session.user.id !== userId && session.user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Forbidden: You can only access your own ratings" },
         { status: 403 }
@@ -32,8 +33,8 @@ export async function GET(
     }
 
     const rating = await RecommendationRatingService.getRecommendationRatingByUserAndJob(
-      params.userId,
-      params.jobId
+      userId,
+      jobId
     );
     
     if (!rating) {

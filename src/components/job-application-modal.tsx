@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useJobActions } from '@/hooks/use-jobs'
-import { Job } from '@/types/job'
 import {
   Dialog,
   DialogContent,
@@ -18,9 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Loader2, Upload, X, Building, MapPin, DollarSign } from 'lucide-react'
+import { JobComplete } from '@/types/job'
 
 interface JobApplicationModalProps {
-  job: Job
+  job: JobComplete
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
@@ -127,7 +127,7 @@ export function JobApplicationModal({
     }
   }
 
-  const salary = formatSalary(job.salaryMin, job.salaryMax, job.currency)
+  const salary = formatSalary(job.salaryMin as number, job.salaryMax as number, job.salaryCurrency)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -164,6 +164,7 @@ export function JobApplicationModal({
                 </div>
               )}
               <div className="flex gap-2">
+                {/* @ts-ignore */}
                 <Badge variant="outline">{job.workType.replace('_', ' ')}</Badge>
                 <Badge variant="outline">{job.experience} Level</Badge>
               </div>

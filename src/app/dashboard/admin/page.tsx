@@ -88,7 +88,7 @@ export default function AdminDashboard() {
   ]
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <main className="container mx-auto p-6 space-y-8 accessibility-text click-assist" role="main" aria-label="Admin Dashboard">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -269,6 +269,6 @@ export default function AdminDashboard() {
           </Card>
         </motion.div>
       </div>
-    </div>
+    </main>
   )
 }

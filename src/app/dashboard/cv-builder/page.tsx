@@ -28,7 +28,7 @@ export default function CVBuilderPage() {
 
 
   return (
-    <div className="h-screen flex flex-col bg-background container mx-auto">
+    <main className="h-screen flex flex-col bg-background container mx-auto accessibility-text click-assist" role="main" aria-label="CV Builder">
 
       {/* Breadcrumb */}
         <div className="flex h-14 items-center px-4 mb-4">
@@ -88,6 +88,6 @@ export default function CVBuilderPage() {
       </div>
 
 
-    </div>
+    </main>
   )
 }

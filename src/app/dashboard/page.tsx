@@ -156,7 +156,7 @@ export default function ApplicationTracker() {
   }))
 
   return (
-    <div className="min-h-screen bg-background max-w-7xl mx-auto">
+    <main className="min-h-screen bg-background max-w-7xl mx-auto accessibility-text click-assist" role="main" aria-label="Application Dashboard">
     
       <div className="container mx-auto px-4 py-6">
         {/* Stats */}
@@ -334,6 +334,6 @@ export default function ApplicationTracker() {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </main>
   )
 }

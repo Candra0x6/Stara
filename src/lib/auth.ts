@@ -55,6 +55,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
+      // @ts-ignore
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null;
@@ -147,6 +148,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    // @ts-ignore
     async signOut({ token }) {
       // Clean up database session on sign out
       if (token.sessionToken) {

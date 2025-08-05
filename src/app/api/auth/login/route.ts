@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import prisma from '@/lib/prisma'
-import { signJWT } from 'jose'
 import { cookies } from 'next/headers'
 
 // Login validation schema

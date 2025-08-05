@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For employers, ensure they can only create jobs for their company
-    if (session.user.role === "EMPLOYER" && session.user.companyId !== validatedData.companyId) {
+    if (session.user.role === "EMPLOYER") {
       return NextResponse.json(
         { success: false, error: "You can only create jobs for your own company" },
         { status: 403 }

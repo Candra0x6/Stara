@@ -90,8 +90,11 @@ export function CompanyCard({
       exit={{ opacity: 0, y: -20 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.2 }}
+      className="accessibility-text"
+      role="article"
+      aria-label={`Company: ${company.name}`}
     >
-      <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 relative group">
+      <Card className="cursor-pointer hover:shadow-lg transition-all duration-200 border-l-4 border-l-blue-500 relative group click-assist">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between">
             <div className="flex items-center space-x-3">

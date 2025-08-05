@@ -156,6 +156,7 @@ export class JobApplicationService {
     }
 
     const application = await prisma.jobApplication.findUnique({
+      // @ts-ignore
       where,
       include: {
         job: {

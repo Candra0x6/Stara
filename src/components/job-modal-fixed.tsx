@@ -36,10 +36,10 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Job } from '@/types/job'
 import { Company } from '@/hooks/use-companies'
 import { X, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import { JobComplete } from '@/types/job'
 
 // Simple form schema that matches what the API expects
 const jobFormSchema = z.object({
@@ -61,7 +61,7 @@ type JobFormData = z.infer<typeof jobFormSchema>
 interface JobModalProps {
   open: boolean
   onClose: () => void
-  job?: Job | null
+  job?: JobComplete | null
   companies: Company[]
   onSave: (data: any) => Promise<void>
 }

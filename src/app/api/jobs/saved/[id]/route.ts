@@ -6,10 +6,11 @@ import { authOptions } from "@/lib/auth"
 // GET single saved job
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -18,7 +19,7 @@ export async function GET(
       )
     }
 
-    const savedJobId = params.id
+    const savedJobId = id
 
     const savedJob = await prisma.savedJob.findUnique({
       where: { id: savedJobId },
@@ -72,10 +73,11 @@ export async function GET(
 // DELETE saved job (unsave)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
+    const { id } = await params
     
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -84,7 +86,7 @@ export async function DELETE(
       )
     }
 
-    const savedJobId = params.id
+    const savedJobId = id
 
     // Get the saved job to check permissions
     const existingSavedJob = await prisma.savedJob.findUnique({

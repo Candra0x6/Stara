@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Job, JobApplication } from '@/types/job'
 import { 
   Briefcase, 
   Heart, 
@@ -17,6 +16,8 @@ import {
   Eye
 } from 'lucide-react'
 import Link from 'next/link'
+import { Job, JobApplication } from '@prisma/client'
+import { JobWithCompany } from '@/hooks/use-jobs'
 
 interface DashboardStats {
   totalApplications: number
@@ -26,10 +27,14 @@ interface DashboardStats {
   profileViews: number
 }
 
+export interface JobApplicationWithJob extends JobApplication {
+  job: JobWithCompany | null
+}
+
 export function JobDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [recentJobs, setRecentJobs] = useState<Job[]>([])
-  const [recentApplications, setRecentApplications] = useState<JobApplication[]>([])
+  const [recentJobs, setRecentJobs] = useState<JobWithCompany[]>([])
+  const [recentApplications, setRecentApplications] = useState<JobApplicationWithJob[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

@@ -10,7 +10,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -73,7 +73,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -206,10 +206,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
+    const { userId } = await params;
     
     if (!session?.user) {
       return NextResponse.json(
@@ -218,7 +219,6 @@ export async function DELETE(
       );
     }
 
-    const { userId } = await params;
 
     // Check if user can delete this profile (own profile or admin)
     if (session.user.id !== userId && session.user.role !== 'ADMIN') {

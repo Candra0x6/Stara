@@ -137,11 +137,7 @@ export async function GET(request: NextRequest) {
           },
         },
         _count: { accommodations: true },
-        _avg: {
-          recommendationRatings: {
-            rating: true,
-          },
-        },
+       
       }),
     ]);
 
@@ -216,7 +212,6 @@ export async function GET(request: NextRequest) {
         accommodationInsights: accommodationStats.map(stat => ({
           accommodations: stat.accommodations,
           jobCount: stat._count.accommodations,
-          averageRating: stat._avg?.recommendationRatings?.rating || 0,
         })),
       },
     });

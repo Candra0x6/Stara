@@ -48,6 +48,7 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
     if (!min && !max) return 'Salary not specified';
     if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()} ${currency}`;
     if (min) return `From $${min.toLocaleString()} ${currency}`;
+    // @ts-ignore
     return `Up to $${max.toLocaleString()} ${currency}`;
   };
   return (
@@ -57,9 +58,11 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-      className="group"
+      className="group accessibility-text"
+      role="article"
+      aria-label={`Job posting: ${job.title} at ${job.company.name}`}
     >
-      <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 border-2 hover:border-primary bg-card">
+      <Card className="rounded-2xl hover:shadow-lg transition-all duration-300 border-2 hover:border-primary bg-card click-assist">
         <CardContent className="p-6">
           <div onClick={() => setShowDetails(!showDetails)} className="">
 
@@ -106,7 +109,7 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
                 <span className="text-sm font-medium text-foreground">Accommodations:</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {job.accommodations.map((accommodation) => {
+                {job.accommodations.map((accommodation : keyof typeof accommodationIcons) => {
                   const config = accommodationIcons[accommodation]
                   if (!config) return null
 
@@ -169,13 +172,6 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
               >
                 {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
               </Button>
-
-              <Button
-                onClick={() => onApply(job.id)}
-                className="bg-text-white rounded-full px-6 transition-all duration-300 hover:shadow-lg"
-              >
-                Apply Now
-              </Button>
             </div>
           </div>
 
@@ -193,7 +189,7 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
                   <div>
                     <h4 className="font-medium mb-2">Requirements:</h4>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      {job.requirements.map((req, index) => (
+                      {job.requirements.map((req : string, index : number) => (
                         <li key={index} className="flex items-center gap-2">
                           <ol className="list-disc pl-4">
                             <li>{req}</li>
@@ -206,7 +202,7 @@ export default function JobCard({ job, onSave, onApply, saved }: JobCardProps) {
                   <div>
                     <h4 className="font-medium mb-2">Benefits:</h4>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      {job.benefits.map((benefit, index) => (
+                      {job.benefits.map((benefit : string, index : number) => (
                         <li key={index} className="flex items-center gap-2">
                           <ol className="list-disc pl-4">
                             <li>{benefit}</li>

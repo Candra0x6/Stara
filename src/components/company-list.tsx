@@ -122,7 +122,7 @@ export function CompanyList({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 accessibility-text click-assist" role="main" aria-label="Companies directory">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

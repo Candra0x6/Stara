@@ -21,7 +21,7 @@ export default function ProtectedRoute({ children, requireProfileSetup = false }
         return
       }
 
-      if (requireProfileSetup && user && !user.profileSetup) {
+      if (requireProfileSetup && user ) {
         router.push('/profile-setup')
         return
       }
@@ -39,7 +39,7 @@ export default function ProtectedRoute({ children, requireProfileSetup = false }
     )
   }
 
-  if (!isAuthenticated || (requireProfileSetup && user && !user.profileSetup)) {
+  if (!isAuthenticated || (requireProfileSetup && user)) {
     return null
   }
 

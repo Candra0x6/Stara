@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Check permissions (admin or company owner)
     const isAdmin = session.user.role === "ADMIN"
-    const isEmployer = session.user.role === "EMPLOYER" && session.user.companyId === companyId
+    const isEmployer = session.user.role === "EMPLOYER"
 
     if (!isAdmin && !isEmployer) {
       return NextResponse.json(

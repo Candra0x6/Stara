@@ -164,7 +164,7 @@ The more context you provide, the better I can tailor my suggestions to your nee
   }
 
   return (
-    <div className="h-full flex flex-col bg-card border-l">
+    <div className="h-full flex flex-col bg-card border-l accessibility-text click-assist" role="complementary" aria-label="AI Assistant">
       {/* Header */}
       <CardHeader className="pb-4 border-b">
         <CardTitle className="flex items-center gap-2 text-sm">

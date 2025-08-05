@@ -143,7 +143,21 @@ export const JobQuerySchema = z.object({
 export const CreateJobApplicationSchema = z.object({
   jobId: z.string().cuid("Invalid job ID"),
   coverLetter: z.string().optional(),
-  resumeUrl: z.string().url().optional().or(z.literal("")),
+  resumeUrl: z.string().optional().refine((val) => {
+    if (!val || val === "") return true
+    
+    // Allow file paths/identifiers (like your file system paths)
+    if (val.includes('/') || val.includes('\\')) return true
+    
+    // Allow URLs
+    try {
+      new URL(val)
+      return true
+    } catch {
+      // If it's not a URL, check if it's a valid string identifier
+      return val.length > 0 && val.length <= 500
+    }
+  }, "Invalid resume reference format"),
   customAnswers: z.array(z.object({
     question: z.string(),
     answer: z.string()
