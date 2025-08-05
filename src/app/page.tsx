@@ -24,10 +24,8 @@ export default function Home() {
       <AccessibilityFeatures />
       <SimpleThreeColumnWithLargeIcons />
       <InclusiveTestimonialsSection />
-      <SpotlightLogoCloud />
       <FrequentlyAskedQuestionsAccordion />
       <SimpleCenteredCTA />
-      <AccessibleFooter />
     </main>
   )
 }

@@ -10,13 +10,13 @@ import React, { useState } from "react";
 import { DashboardNavigation } from "./dashboard-navbar";
 
 export function NavbarWithChildren() {
-  
+  const session = useAuth();
   const pathname = usePathname();
     const [activeSection, setActiveSection] = useState(pathname.split("/")[2] || "dashboard");
 
     // Mock user data
     const user = {
-        name: "Alex Johnson",
+        name: session.user?.name || "User",
         avatar: undefined,
         notifications: 3,
     }
@@ -205,12 +205,11 @@ export const Logo = () => {
       className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black"
     >
       <Image
-        src="https://assets.aceternity.com/logo-dark.png"
+        src="/stara.png"
         alt="logo"
-        width={30}
-        height={30}
+        width={50}
+        height={50}
       />
-      <span className="font-medium text-black dark:text-white">DevStudio</span>
     </Link>
   );
 };

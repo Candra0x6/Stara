@@ -223,6 +223,7 @@ const fontOptions = [
 
 const languageOptions = [
   { value: "en", label: "English" },
+  { value: "id", label: "Bahasa Indonesia" },
   { value: "es", label: "Español" },
   { value: "fr", label: "Français" },
   { value: "de", label: "Deutsch" },
@@ -307,6 +308,7 @@ export default function AccessibilityPanel({ isOpen, onClose, onSettingsChange }
   }, [settings])
 
   const updateSetting = <K extends keyof AccessibilitySettings>(key: K, value: AccessibilitySettings[K]) => {
+    console.log(`Updating setting: ${key} with value:`, value)
     setSettings((prev) => ({ ...prev, [key]: value }))
   }
 
@@ -1204,11 +1206,24 @@ export default function AccessibilityPanel({ isOpen, onClose, onSettingsChange }
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="language">Interface Language</Label>
-                    <Select value={settings.language} onValueChange={(value) => updateSetting("language", value)}>
-                      <SelectTrigger id="language" className="rounded-lg">
-                        <SelectValue />
+                    <Select 
+                      value={settings.language} 
+                      onValueChange={(value: string) => {
+                        console.log("Language selection changed to:", value)
+                        updateSetting("language", value)
+                      }}
+                      onOpenChange={(open) => {
+                        console.log("Language select open state:", open)
+                      }}
+                    >
+                      <SelectTrigger 
+                        id="language" 
+                        className="rounded-lg"
+                        onClick={() => console.log("Language select trigger clicked")}
+                      >
+                        <SelectValue placeholder="Select language" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-lg">
+                      <SelectContent className="rounded-lg z-[80]" position="popper" sideOffset={4}>
                         {languageOptions.map((lang) => (
                           <SelectItem key={lang.value} value={lang.value}>
                             {lang.label}
