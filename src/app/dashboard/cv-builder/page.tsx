@@ -28,13 +28,11 @@ export default function CVBuilderPage() {
 
 
   return (
-    <main className="h-screen flex flex-col bg-background container mx-auto accessibility-text click-assist" role="main" aria-label="CV Builder">
+    <main className="min-h-screen flex flex-col bg-background container mx-auto accessibility-text click-assist" role="main" aria-label="CV Builder">
 
       {/* Breadcrumb */}
         <div className="flex h-14 items-center px-4 mb-4">
-
           <div className="ml-auto flex items-center gap-2">
-
             <div className="flex items-center rounded-lg border bg-background">
               <Button
                 variant={viewMode === "desktop" ? "default" : "ghost"}
@@ -67,6 +65,7 @@ export default function CVBuilderPage() {
                 selectedFile={selectedFile}
               />
             </ResizablePanel>
+
           </div>
 
           {/* Resizable Handle */}
