@@ -421,7 +421,7 @@ export const JobRecommendations: React.FC<JobRecommendationsProps> = ({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full p-0 bg-background border shadow-sm hover:bg-background hover:text-foreground"
+                        className="absolute -bottom-4 -right-7 w-3 h-3 rounded-full p-0 border shadow-sm  hover:text-foreground"
                         onClick={() => setShowMatchReason(!showMatchReason)}
                         aria-label="Show match explanation"
                       >
